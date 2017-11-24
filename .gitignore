@@ -1,3 +1,4 @@
 *.pyc
 *.pt
 *.DS_Store
+logs

@@ -1,4 +1,5 @@
 # coding: utf-8
+import pdb
 import argparse
 import time
 import math
@@ -10,7 +11,7 @@ import data
 import model
 
 parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
-parser.add_argument('--data', type=str, default='./data/penn',
+parser.add_argument('--data', type=str, default='./data/multi30k',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='LSTM',
                     help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU)')
@@ -42,6 +43,9 @@ parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
 parser.add_argument('--save', type=str,  default='model.pt',
                     help='path to save the final model')
+parser.add_argument('--lang', type=str,  default='en-fr',
+                    choices=['en-fr'],
+                    help='in-out languages')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -56,7 +60,9 @@ if torch.cuda.is_available():
 # Load data
 ###############################################################################
 
-corpus = data.Corpus(args.data)
+corpus = data.Corpus(args.data, args.lang)
+
+pdb.set_trace()
 
 # Starting from sequential data, batchify arranges the dataset into columns.
 # For instance, with the alphabet as the sequence and batch size 4, we'd get
