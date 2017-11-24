@@ -11,9 +11,9 @@ class Dictionary(object):
         self.idx2word = []
         self.vocab_set = set()
 
-        # add <unk> token
-        self.idx2word.append(u'<unk>')
-        self.word2idx[u'<unk>'] = 0
+        # add <unk> and <eos> tokens
+        self.add_word(u'<eos>')  # ID 0
+        self.add_word(u'<unk>')  # ID 1
 
     def add_word(self, word):
         if word not in self.word2idx:
@@ -46,8 +46,6 @@ class Corpus(object):
         test_out = self.tokenize(os.path.join(path,
             'test.{}'.format(lang_out)))
 
-        pdb.set_trace()
-
         self.train = (train_in, train_out)
         self.valid = (valid_in, valid_out)
         self.test = (test_in, test_out)
@@ -57,30 +55,37 @@ class Corpus(object):
         assert os.path.exists(path)
         # Add words to the dictionary
         with open(path, 'r') as f:
-            tokens = 0
+            sentences = 0
+            max_tokens = 0
             for line in f:
                 line = line.decode('utf-8', 'strict')
                 words = re.findall(r"[\w']+|[.,!?;]", line.lower(),
                         flags=re.UNICODE) + [u'<eos>']
-                tokens += len(words)
+
                 # only add words if in training set
                 if 'train' in path:
                     for word in words:
                         self.dictionary.add_word(word)
                     self.dictionary.vocab_set = set(self.dictionary.idx2word)
 
+                # track stats for building tokenized version
+                tokens = len(words)
+                sentences += 1
+                if tokens > max_tokens:
+                    max_tokens = tokens
+
         # Tokenize file content
         with open(path, 'r') as f:
-            ids = torch.LongTensor(tokens)
-            token = 0
-            for line in f:
+            ids = torch.LongTensor(max_tokens, sentences).zero_()
+            for i, line in enumerate(f):
+                token = 0
                 line = line.decode('utf-8', 'strict')
                 words = re.findall(r"[\w']+|[.,!?;]", line.lower(),
                         flags=re.UNICODE) + [u'<eos>']
                 for word in words:
                     if word not in self.dictionary.vocab_set:
                         word = u'<unk>'
-                    ids[token] = self.dictionary.word2idx[word]
+                    ids[token, i] = self.dictionary.word2idx[word]
                     token += 1
 
         return ids
