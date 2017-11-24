@@ -9,9 +9,10 @@ class Dictionary(object):
         self.idx2word = []
         self.vocab_set = set()
 
-        # add <unk> and <eos> tokens
+        # add <unk> <sos> and <eos> tokens
         self.add_word(u'<eos>')  # ID 0
-        self.add_word(u'<unk>')  # ID 1
+        self.add_word(u'<sos>')  # ID 1
+        self.add_word(u'<unk>')  # ID 2
 
     def add_word(self, word):
         if word not in self.word2idx:
