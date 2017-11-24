@@ -16,11 +16,17 @@ parser.add_argument('--data', type=str, default='./data/multi30k',
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
-parser.add_argument('--emsize', type=int, default=200,
+parser.add_argument('--enc_emsize', type=int, default=150,
                     help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=200,
+parser.add_argument('--dec_emsize', type=int, default=175,
+                    help='size of word embeddings')
+parser.add_argument('--enc_nhid', type=int, default=200,
                     help='number of hidden units per layer')
-parser.add_argument('--nlayers', type=int, default=2,
+parser.add_argument('--dec_nhid', type=int, default=250,
+                    help='number of hidden units per layer')
+parser.add_argument('--enc_nlayers', type=int, default=2,
+                    help='number of layers')
+parser.add_argument('--dec_nlayers', type=int, default=2,
                     help='number of layers')
 parser.add_argument('--lr', type=float, default=20,
                     help='initial learning rate')
@@ -32,10 +38,6 @@ parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--dropout', type=float, default=0.2,
-                    help='dropout applied to layers (0 = no dropout)')
-parser.add_argument('--tied', action='store_true',
-                    help='tie the word embedding and softmax weights')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
@@ -76,19 +78,27 @@ if args.cuda:
 ###############################################################################
 
 encoder = model.EncoderRNN(args.model,
-                           len(corpus.dictionary),
-                           args.emsize,
-                           args.nhid,
+                           len(corpus.dictionary['src']),
+                           args.enc_emsize,
+                           args.enc_nhid,
                            args.batch_size,
-                           args.nlayers)
+                           args.enc_nlayers)
 
-encoder_hidden = encoder.init_hidden_state()
+decoder = model.DecoderRNN(args.model,
+                           args.enc_nhid,
+                           args.dec_emsize,
+                           args.dec_nhid,
+                           len(corpus.dictionary['tgt']),
+                           args.batch_size,
+                           args.dec_nlayers)
 
 if args.cuda:
     encoder.cuda()
+    decoder.cuda()
 
 if args.verbose:
     print(encoder)
+    print(decoder)
 
 pdb.set_trace()
 

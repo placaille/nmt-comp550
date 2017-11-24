@@ -3,21 +3,22 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 class EncoderRNN(nn.Module):
-    def __init__(self, rnn_type, input_size, embd_size, hidden_size, batch_size, n_layers=2):
+    def __init__(self, rnn_type, input_size, enc_embd_size, enc_hidden_size,
+            batch_size, n_layers=2):
         super(EncoderRNN, self).__init__()
 
         self.input_size = input_size
-        self.embd_size  = embd_size
-        self.hidden_size = hidden_size
+        self.enc_embd_size  = enc_embd_size
+        self.enc_hidden_size = enc_hidden_size
         self.batch_size = batch_size
         self.n_layers = n_layers
         self.rnn_type = rnn_type
 
-        self.embedding = nn.Embedding(input_size, embd_size)
+        self.embedding = nn.Embedding(input_size, enc_embd_size)
         if rnn_type == 'GRU':
-            self.rnn = nn.GRU(embd_size, hidden_size, n_layers)
+            self.rnn = nn.GRU(enc_embd_size, enc_hidden_size, n_layers)
         elif rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(embd_size, hidden_size, n_layers)
+            self.rnn = nn.LSTM(enc_embd_size, enc_hidden_size, n_layers)
 
     def forward(self, input, hidden):
         output = self.embedding(input).view(input.size(0), input.size(1), -1)
@@ -26,12 +27,52 @@ class EncoderRNN(nn.Module):
         return output, hidden
 
     def init_hidden_state(self):
-        hidden_state_dims = (self.n_layers, self.batch_size, self.hidden_size)
+        weight = next(self.parameters()).data
+        hidden_state_dims = (self.n_layers, self.batch_size, self.enc_hidden_size)
         if self.rnn_type == 'LSTM':
-            return (Variable(torch.zeros(hidden_state_dims)),
-                    Variable(torch.zeros(hidden_state_dims)))
+            return (Variable(weight.new(hidden_state_dims).zero_()),
+                    Variable(weight.new(hidden_state_dims).zero_()))
         else:
-            return Variable(torch.zeros(hidden_state_dims))
+            return Variable(weight.new(hidden_state_dims).zero_())
+
+
+class DecoderRNN(nn.Module):
+    def __init__(self, rnn_type, enc_hidden_size, dec_embd_size,
+            dec_hidden_size, output_size, batch_size, n_layers=2):
+        super(DecoderRNN, self).__init__()
+
+        self.enc_hidden_size = enc_hidden_size
+        self.output_size = output_size
+        self.batch_size = batch_size
+        self.n_layers = n_layers
+        self.rnn_type = rnn_type
+
+        self.embedding = nn.Embedding(enc_hidden_size, dec_embd_size)
+        if rnn_type == 'GRU':
+            self.rnn = nn.GRU(dec_embd_size, dec_hidden_size, n_layers)
+        elif rnn_type == 'LSTM':
+            self.rnn = nn.LSTM(dec_embd_size, dec_hidden_size, n_layers)
+
+        self.out = nn.Linear(dec_hidden_size, output_size)
+        self.softmax = nn.LogSoftmax()
+
+    def forward(self, input, hidden):
+        output = self.embedding(input).view(input.size(0), input.size(1), -1)
+        for i in xrange(self.n_layers):
+            output = F.relu(output)
+            output, hidden = self.rnn(output, hidden)
+        output = self.softmax(self.out(output[0]))
+        return output, hidden
+
+    def init_hidden_state(self):
+        weight = next(self.parameters()).data
+        hidden_state_dims = (self.n_layers, self.batch_size, self.dec_hidden_size)
+        if self.rnn_type == 'LSTM':
+            return (Variable(weight.new(hidden_state_dims).zero_()),
+                    Variable(weight.new(hidden_state_dims).zero_()))
+        else:
+            return Variable(weight.new(hidden_state_dims).zero_())
+
 
 
 class RNNModel(nn.Module):
