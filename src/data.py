@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
-import unicodedata
 import re
 import torch
-import pdb
 
 class Dictionary(object):
     def __init__(self):

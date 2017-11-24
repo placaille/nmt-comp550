@@ -14,7 +14,8 @@ parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Lang
 parser.add_argument('--data', type=str, default='./data/multi30k',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='LSTM',
-                    help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU)')
+                    choices=['LSTM', 'GRU'],
+                    help='type of recurrent net (LSTM, GRU)')
 parser.add_argument('--emsize', type=int, default=200,
                     help='size of word embeddings')
 parser.add_argument('--nhid', type=int, default=200,
@@ -65,46 +66,31 @@ if args.verbose:
     print('Processing data..')
 corpus = data.Corpus(args.data, args.lang)
 
-
-# Starting from sequential data, batchify arranges the dataset into columns.
-# For instance, with the alphabet as the sequence and batch size 4, we'd get
-# ┌ a g m s ┐
-# │ b h n t │
-# │ c i o u │
-# │ d j p v │
-# │ e k q w │
-# └ f l r x ┘.
-# These columns are treated as independent by the model, which means that the
-# dependence of e. g. 'g' on 'f' can not be learned, but allows more efficient
-# batch processing.
-if args.verbose:
-    print('Creating batches..')
-def batchify(data, bsz):
-    # Work out how cleanly we can divide the dataset into bsz parts.
-    nbatch = data.size(0) // bsz
-    # Trim off any extra elements that wouldn't cleanly fit (remainders).
-    data = data.narrow(0, 0, nbatch * bsz)
-    # Evenly divide the data across the bsz batches.
-    data = data.view(bsz, -1).t().contiguous()
-    if args.cuda:
-        data = data.cuda()
-    return data
-
-pdb.set_trace()
-
-eval_batch_size = 10
-train_data = batchify(corpus.train, args.batch_size)
-val_data = batchify(corpus.valid, eval_batch_size)
-test_data = batchify(corpus.test, eval_batch_size)
+if args.cuda:
+    train_src, train_tgt = corpus.train[0].cuda(), corpus.train[1].cuda()
+    valid_src, valid_tgt = corpus.valid[0].cuda(), corpus.valid[1].cuda()
+    test_src, test_tgt = corpus.test[0].cuda(), corpus.test[1].cuda()
 
 ###############################################################################
 # Build the model
 ###############################################################################
 
-ntokens = len(corpus.dictionary)
-model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied)
+encoder = model.EncoderRNN(args.model,
+                           len(corpus.dictionary),
+                           args.emsize,
+                           args.nhid,
+                           args.batch_size,
+                           args.nlayers)
+
+encoder_hidden = encoder.init_hidden_state()
+
 if args.cuda:
-    model.cuda()
+    encoder.cuda()
+
+if args.verbose:
+    print(encoder)
+
+pdb.set_trace()
 
 criterion = nn.CrossEntropyLoss()
 
