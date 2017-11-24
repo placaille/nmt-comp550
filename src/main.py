@@ -16,17 +16,9 @@ parser.add_argument('--data', type=str, default='./data/multi30k',
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
-parser.add_argument('--enc_emsize', type=int, default=150,
-                    help='size of word embeddings')
-parser.add_argument('--dec_emsize', type=int, default=175,
-                    help='size of word embeddings')
-parser.add_argument('--enc_nhid', type=int, default=200,
+parser.add_argument('--nhid', type=int, default=200,
                     help='number of hidden units per layer')
-parser.add_argument('--dec_nhid', type=int, default=250,
-                    help='number of hidden units per layer')
-parser.add_argument('--enc_nlayers', type=int, default=2,
-                    help='number of layers')
-parser.add_argument('--dec_nlayers', type=int, default=2,
+parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
 parser.add_argument('--lr', type=float, default=20,
                     help='initial learning rate')
@@ -79,18 +71,15 @@ if args.cuda:
 
 encoder = model.EncoderRNN(args.model,
                            len(corpus.dictionary['src']),
-                           args.enc_emsize,
-                           args.enc_nhid,
+                           args.nhid,
                            args.batch_size,
-                           args.enc_nlayers)
+                           args.nlayers)
 
 decoder = model.DecoderRNN(args.model,
-                           args.enc_nhid,
-                           args.dec_emsize,
-                           args.dec_nhid,
+                           args.nhid,
                            len(corpus.dictionary['tgt']),
                            args.batch_size,
-                           args.dec_nlayers)
+                           args.nlayers)
 
 if args.cuda:
     encoder.cuda()
@@ -100,6 +89,13 @@ if args.verbose:
     print(encoder)
     print(decoder)
 
+# test encoder/decoder with fake data
+# test_words = Variable(torch.LongTensor(13, 20).zero_().cuda())
+# h0 = encoder.init_hidden()
+# enc_out, enc_hid = encoder(test_words, h0)
+# dec_h0 = enc_hid
+# dec_words = Variable(torch.LongTensor(1, 20).zero_().cuda())
+# dec_out, dec_hid = decoder(dec_words, dec_h0)
 pdb.set_trace()
 
 criterion = nn.CrossEntropyLoss()

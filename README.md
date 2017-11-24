@@ -19,3 +19,10 @@ training data is used to build the vocabulary (from both source and target langu
 
 Processed data is a tensor of the indices to word dictionary, arranged in the
 form [tokens, sentences] of size max\_tokens x nb\_sentences, where we pad the shorter sentences with \<eos\> tag (indice 0). we then have tuples for each train, valid and test datasets.
+
+
+### Model input
+The input to the encoder is a matrix of the tokens ID for each sequence
+(columns is the batch axis). The embedding layer of pytorch maps the ID to an
+embedding of the same dimensions as the hidden state.
+
