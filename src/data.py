@@ -28,27 +28,27 @@ class Corpus(object):
 
         path = os.path.join(path, lang)
 
-        self.dictionary = Dictionary()
-        lang_in, lang_out = lang.split('-')
+        self.dictionary = {'src': Dictionary(), 'tgt': Dictionary()}
+        lang_src, lang_tgt = lang.split('-')
 
-        train_in = self.tokenize(os.path.join(path,
-            'train.{}'.format(lang_in)))
-        train_out = self.tokenize(os.path.join(path,
-            'train.{}'.format(lang_out)))
-        valid_in = self.tokenize(os.path.join(path,
-            'val.{}'.format(lang_in)))
-        valid_out = self.tokenize(os.path.join(path,
-            'val.{}'.format(lang_out)))
-        test_in = self.tokenize(os.path.join(path,
-            'test.{}'.format(lang_in)))
-        test_out = self.tokenize(os.path.join(path,
-            'test.{}'.format(lang_out)))
+        train_src = self.tokenize(os.path.join(path,
+            'train.{}'.format(lang_src)), 'src')
+        train_tgt = self.tokenize(os.path.join(path,
+            'train.{}'.format(lang_tgt)), 'tgt')
+        valid_src = self.tokenize(os.path.join(path,
+            'val.{}'.format(lang_src)), 'src')
+        valid_tgt = self.tokenize(os.path.join(path,
+            'val.{}'.format(lang_tgt)), 'tgt')
+        test_src = self.tokenize(os.path.join(path,
+            'test.{}'.format(lang_src)), 'src')
+        test_tgt = self.tokenize(os.path.join(path,
+            'test.{}'.format(lang_tgt)), 'tgt')
 
-        self.train = (train_in, train_out)
-        self.valid = (valid_in, valid_out)
-        self.test = (test_in, test_out)
+        self.train = (train_src, train_tgt)
+        self.valid = (valid_src, valid_tgt)
+        self.test = (test_src, test_tgt)
 
-    def tokenize(self, path):
+    def tokenize(self, path, src_tgt):
         """Tokenizes a text file."""
         assert os.path.exists(path)
         # Add words to the dictionary
@@ -63,8 +63,9 @@ class Corpus(object):
                 # only add words if in training set
                 if 'train' in path:
                     for word in words:
-                        self.dictionary.add_word(word)
-                    self.dictionary.vocab_set = set(self.dictionary.idx2word)
+                        self.dictionary[src_tgt].add_word(word)
+                    self.dictionary[src_tgt].vocab_set = \
+                        set(self.dictionary[src_tgt].idx2word)
 
                 # track stats for building tokenized version
                 tokens = len(words)
@@ -81,9 +82,9 @@ class Corpus(object):
                 words = re.findall(r"[\w']+|[.,!?;]", line.lower(),
                         flags=re.UNICODE) + [u'<eos>']
                 for word in words:
-                    if word not in self.dictionary.vocab_set:
+                    if word not in self.dictionary[src_tgt].vocab_set:
                         word = u'<unk>'
-                    ids[token, i] = self.dictionary.word2idx[word]
+                    ids[token, i] = self.dictionary[src_tgt].word2idx[word]
                     token += 1
 
         return ids
