@@ -19,4 +19,5 @@ python $python_script \
 	--data $data_dir \
 	--save $save_dir/$run_name \
 	--lang en-fr \
-	--verbose
+	--verbose \
+	--batch_size 1

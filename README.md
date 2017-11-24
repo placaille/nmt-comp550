@@ -19,6 +19,8 @@ training data is used to build the vocabulary (from both source and target langu
 
 Processed data is a tensor of the indices to word dictionary, arranged in the
 form [tokens, sentences] of size max\_tokens x nb\_sentences, where we pad the shorter sentences with \<eos\> tag (indice 0). we then have tuples for each train, valid and test datasets.
+-> This is no longer true, will work on implementation 1 sentence at teh time
+and then optimize.
 
 
 ### Model input
