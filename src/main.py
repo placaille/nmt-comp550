@@ -46,6 +46,8 @@ parser.add_argument('--save', type=str,  default='model.pt',
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
+parser.add_argument('--verbose', action='store_true',
+                    help='verbose flag')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -59,10 +61,10 @@ if torch.cuda.is_available():
 ###############################################################################
 # Load data
 ###############################################################################
-
+if args.verbose:
+    print('Processing data..')
 corpus = data.Corpus(args.data, args.lang)
 
-pdb.set_trace()
 
 # Starting from sequential data, batchify arranges the dataset into columns.
 # For instance, with the alphabet as the sequence and batch size 4, we'd get
@@ -75,7 +77,8 @@ pdb.set_trace()
 # These columns are treated as independent by the model, which means that the
 # dependence of e. g. 'g' on 'f' can not be learned, but allows more efficient
 # batch processing.
-
+if args.verbose:
+    print('Creating batches..')
 def batchify(data, bsz):
     # Work out how cleanly we can divide the dataset into bsz parts.
     nbatch = data.size(0) // bsz

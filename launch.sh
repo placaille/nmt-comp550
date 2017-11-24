@@ -18,4 +18,5 @@ python $python_script \
 	--cuda \
 	--data $data_dir \
 	--save $save_dir/$run_name \
-	--lang en-fr
+	--lang en-fr \
+	--verbose

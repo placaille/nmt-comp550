@@ -9,6 +9,11 @@ class Dictionary(object):
     def __init__(self):
         self.word2idx = {}
         self.idx2word = []
+        self.vocab_set = set()
+
+        # add <unk> token
+        self.idx2word.append(u'<unk>')
+        self.word2idx[u'<unk>'] = 0
 
     def add_word(self, word):
         if word not in self.word2idx:
@@ -28,45 +33,41 @@ class Corpus(object):
         self.dictionary = Dictionary()
         lang_in, lang_out = lang.split('-')
 
-        self.train_in = self.tokenize(os.path.join(path,
+        train_in = self.tokenize(os.path.join(path,
             'train.{}'.format(lang_in)))
-        self.train_out = self.tokenize(os.path.join(path,
+        train_out = self.tokenize(os.path.join(path,
             'train.{}'.format(lang_out)))
-        self.valid_in = self.tokenize(os.path.join(path,
+        valid_in = self.tokenize(os.path.join(path,
             'val.{}'.format(lang_in)))
-        self.valid_out = self.tokenize(os.path.join(path,
+        valid_out = self.tokenize(os.path.join(path,
             'val.{}'.format(lang_out)))
-        self.test_in = self.tokenize(os.path.join(path,
+        test_in = self.tokenize(os.path.join(path,
             'test.{}'.format(lang_in)))
-        self.test_out = self.tokenize(os.path.join(path,
+        test_out = self.tokenize(os.path.join(path,
             'test.{}'.format(lang_out)))
 
-    def sub_french_accents(string):
-        """
-        Thanks to stackoverflow for the idea
-        """
-        string = re.sub(u"[èéêë]", 'e', string)
-        string = re.sub(u"[òóôõö]", 'o', string)
-        string = re.sub(u"[ìíîï]", 'i', string)
-        string = re.sub(u"[ùúûü]", 'u', string)
-        string = re.sub(u"[àáâãäå]", 'a', string)
-        string = re.sub(u"[ýÿ]", 'y', string)
-        return string
+        pdb.set_trace()
+
+        self.train = (train_in, train_out)
+        self.valid = (valid_in, valid_out)
+        self.test = (test_in, test_out)
 
     def tokenize(self, path):
         """Tokenizes a text file."""
         assert os.path.exists(path)
         # Add words to the dictionary
         with open(path, 'r') as f:
-            pdb.set_trace()
             tokens = 0
             for line in f:
                 line = line.decode('utf-8', 'strict')
                 words = re.findall(r"[\w']+|[.,!?;]", line.lower(),
-                        flags=re.UNICODE) + ['<eos>']
+                        flags=re.UNICODE) + [u'<eos>']
                 tokens += len(words)
-                for word in words:
-                    self.dictionary.add_word(word)
+                # only add words if in training set
+                if 'train' in path:
+                    for word in words:
+                        self.dictionary.add_word(word)
+                    self.dictionary.vocab_set = set(self.dictionary.idx2word)
 
         # Tokenize file content
         with open(path, 'r') as f:
@@ -75,8 +76,10 @@ class Corpus(object):
             for line in f:
                 line = line.decode('utf-8', 'strict')
                 words = re.findall(r"[\w']+|[.,!?;]", line.lower(),
-                        flags=re.UNICODE) + ['<eos>']
+                        flags=re.UNICODE) + [u'<eos>']
                 for word in words:
+                    if word not in self.dictionary.vocab_set:
+                        word = u'<unk>'
                     ids[token] = self.dictionary.word2idx[word]
                     token += 1
 
