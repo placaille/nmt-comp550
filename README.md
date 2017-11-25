@@ -7,6 +7,9 @@ repo](https://github.com/pytorch/examples/tree/master/word_language_model) and
 doc](http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html)
 for reference.
 
+The code for the masked_cross_entropy was borrowed from [this
+repo](https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation).
+
 ## The task is the WMT17 multimodal (task 1)
 For more information refer to [this
 link](http://www.statmt.org/wmt17/multimodal-task.html)
