@@ -1,9 +1,11 @@
 # coding: utf-8
+from __future__ import division
 import pdb
 import argparse
 import random
 import time
 import math
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -147,7 +149,7 @@ def train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim,
     enc_optim.step()
     dec_optim.step()
 
-    return loss.data[0]
+    return loss.data[0] / n_step
 
 
 def train_epoch():
@@ -170,12 +172,12 @@ def train_epoch():
         total_loss += loss
 
         if batch_id % args.log_interval == 0 and batch_id > 0:
-            cur_loss = total_loss[0] / args.log_interval
+            cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch_id, len(train_src) // args.bptt, lr,
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
+                epoch, batch_id, len(train_src) // args.batch_size, args.lr,
+                elapsed * 1000 / args.log_interval, cur_loss, np.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
 
@@ -191,22 +193,25 @@ def evaluate(data_source):
         output_flat = output.view(-1, ntokens)
         total_loss += len(data) * criterion(output_flat, targets).data
         hidden = repackage_hidden(hidden)
-    return total_loss[0] / len(data_source)
+    return total_loss / len(data_source)
 
+
+if args.verbose:
+    print('Starting training..')
 
 # Loop over epochs.
 best_val_loss = None
-
 # At any point you can hit Ctrl + C to break out of training early.
 try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_epoch()
-        val_loss = evaluate(val_data)
+        # val_loss = evaluate(val_data)
+        val_loss = 0
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                           val_loss, math.exp(val_loss)))
+                                           val_loss, np.exp(val_loss)))
         print('-' * 89)
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
@@ -225,8 +230,9 @@ with open(args.save, 'rb') as f:
     model = torch.load(f)
 
 # Run on test data.
-test_loss = evaluate(test_data)
+# test_loss = evaluate(test_data)
+test_loss = 0
 print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    test_loss, math.exp(test_loss)))
+    test_loss, np.exp(test_loss)))
 print('=' * 89)
