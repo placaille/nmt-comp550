@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from masked_cross_entropy import *
 
 import data
 import model
@@ -105,8 +106,6 @@ def train_step(encoder, decoder, batch, enc_optim, dec_optim,
 
     batch_src, batch_tgt, len_src, len_tgt =  batch
 
-    pdb.set_trace()
-
     max_src = batch_src.size(0)
     max_tgt = batch_tgt.size(0)
     try:
@@ -116,13 +115,6 @@ def train_step(encoder, decoder, batch, enc_optim, dec_optim,
         batch_src.unsqueeze(1)
         batch_tgt.unsqueeze(1)
 
-    dec_input = Variable(torch.LongTensor([SOS_token] * b_size))
-
-    if cuda:
-        batch_src = batch_src.cuda()
-        batch_tgt = batch_tgt.cuda()
-        dec_input = dec_input.cuda()
-
     loss = 0
     enc_optim.zero_grad()
     dec_optim.zero_grad()
@@ -130,23 +122,31 @@ def train_step(encoder, decoder, batch, enc_optim, dec_optim,
     enc_h0 = encoder.init_hidden()
 
     # run src sentence in encoder and get final state
-    enc_out, enc_hid = encoder(batch_src, enc_h0)
+    enc_out, enc_hid = encoder(batch_src, enc_h0, len_src)
     dec_hid = enc_hid
+    dec_input = Variable(torch.LongTensor([SOS_token] * b_size))
+
+    # Create variable that will hold all the sequence from decoding
+    dec_outs = Variable(torch.zeros(max_tgt, b_size, decoder.output_size))
+
+    if cuda:
+        dec_input = dec_input.cuda()
+        dec_outs = dec_outs.cuda()
 
     # decode by looping time steps
-    for step in xrange(n_step):
+    for step in xrange(max_tgt):
         dec_out, dec_hid = decoder(dec_input, dec_hid)
 
         # get highest scoring token and value
-        top_val, top_tok = dec_out.data.topk(1)
-
-        # compute loss
-        loss += criterion(dec_out, batch_tgt[step])
-
-        # test if predicting end of sentence
-        if top_tok[0][0] == EOS_token:
-            break
+        top_val, top_tok = dec_out.data.topk(1, dim=1)
         dec_input = Variable(top_tok)
+
+        # store all steps for later loss computing
+        dec_outs[step] = dec_out
+
+    loss = masked_cross_entropy(dec_outs.transpose(1,0).contiguous(),
+                                batch_tgt.transpose(1,0).contiguous(),
+                                len_tgt)
 
     # update params
     loss.backward()
@@ -156,7 +156,7 @@ def train_step(encoder, decoder, batch, enc_optim, dec_optim,
     enc_optim.step()
     dec_optim.step()
 
-    return loss.data[0] / n_step
+    return loss.data[0]
 
 
 def minibatch_generator(size, dataset, cuda, shuffle=True):
@@ -198,19 +198,26 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         # we need to fill shorter sentences to make tensor
         max_src = max(len_src)
         max_tgt = max(len_tgt)
-
         b_src_ = [fill_seq(seq, max_src, PAD_token) for seq in b_src]
-        b_tgt_ = [fill_seq(seq, max_tgt, PAD_token) for tgt in b_tgt]
+        b_tgt_ = [fill_seq(seq, max_tgt, PAD_token) for seq in b_tgt]
+
+        # sort the lists by len_src for pack_padded_sentence later
+        b_sorted = [(x,y,ls,lt) for (x,y,ls,lt) in \
+                       sorted(zip(b_src_, b_tgt_, len_src, len_tgt),
+                              key=lambda v: v[2],  # using len_src
+                              reverse=True)]  # descending order
+        # unzip to individual lists
+        b_src_s, b_tgt_s, len_src_s, len_tgt_s = zip(*b_sorted)
 
         # create pytorch variable, transpose to have (seq, batch)
-        batch_src = Variable(torch.LongTensor(b_src_).t())
-        batch_tgt = Variable(torch.LongTensor(b_tgt_).t())
+        batch_src = Variable(torch.LongTensor(b_src_s).t())
+        batch_tgt = Variable(torch.LongTensor(b_tgt_s).t())
 
         if cuda:
             batch_src = batch_src.cuda()
             batch_tgt = batch_tgt.cuda()
 
-        yield batch_src, batch_tgt, len_src, len_tgt
+        yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
 
 def train_epoch():
@@ -233,7 +240,7 @@ def train_epoch():
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, n_batch, len(train_src) // args.batch_size, args.lr,
+                epoch, n_batch, corpus.n_sent_train // args.batch_size, args.lr,
                 elapsed * 1000 / args.log_interval, cur_loss, np.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
