@@ -28,9 +28,8 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, path, lang, cuda):
+    def __init__(self, path, lang):
 
-        self.cuda = cuda
         path = os.path.join(path, lang)
 
         self.dictionary = {'src': Dictionary(), 'tgt': Dictionary()}
@@ -87,8 +86,7 @@ class Corpus(object):
                         flags=re.UNICODE) + [u'<eos>']
 
                 token = 0
-                idx = Variable(torch.LongTensor(len(words)).zero_())
-                idx = idx.cuda() if self.cuda else False
+                idx = range(len(words))
                 for word in words:
                     if word not in self.dictionary[src_tgt].vocab_set:
                         word = u'<unk>'

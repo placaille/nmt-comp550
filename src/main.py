@@ -60,11 +60,7 @@ if torch.cuda.is_available():
 
 if args.verbose:
     print('Processing data..')
-corpus = data.Corpus(args.data, args.lang, args.cuda)
-
-train_src, train_tgt = corpus.train
-valid_src, valid_tgt = corpus.valid
-test_src, test_tgt = corpus.test
+corpus = data.Corpus(args.data, args.lang)
 
 ###############################################################################
 # Build the model
@@ -100,16 +96,27 @@ dec_optim = torch.optim.Adam(decoder.parameters(), args.lr)
 # Training code
 ###############################################################################
 
-def train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim,
-               criterion, SOS_token=1, EOS_token=0, cuda=True, max_length=50,
-               clip=0):
+def train_step(encoder, decoder, batch, enc_optim, dec_optim,
+               criterion, cuda=True, max_length=50, clip=0):
 
-    n_step = batch_tgt.size(0)
+    PAD_token = 2
+    SOS_token = 1
+    EOS_token = 0
 
-    batch_src.unsqueeze(1)
-    batch_tgt.unsqueeze(1)
+    batch_src, batch_tgt, len_src, len_tgt =  batch
 
-    dec_input = Variable(torch.LongTensor([SOS_token]))
+    pdb.set_trace()
+
+    max_src = batch_src.size(0)
+    max_tgt = batch_tgt.size(0)
+    try:
+        b_size = batch_tgt.size(1)
+    except:
+        b_size = 1
+        batch_src.unsqueeze(1)
+        batch_tgt.unsqueeze(1)
+
+    dec_input = Variable(torch.LongTensor([SOS_token] * b_size))
 
     if cuda:
         batch_src = batch_src.cuda()
@@ -152,22 +159,71 @@ def train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim,
     return loss.data[0] / n_step
 
 
+def minibatch_generator(size, dataset, cuda, shuffle=True):
+    """
+    Generator used to feed the minibatches
+    """
+    PAD_token = 2
+    SOS_token = 1
+    EOS_token = 0
+
+    def fill_seq(input, padded_length, fill_token):
+        input += [fill_token] * (padded_length - len(input))
+        return input
+
+    src, tgt = dataset
+
+    nb_elem = len(src)
+    indices = range(nb_elem)
+    if shuffle:
+        random.shuffle(indices)
+    while nb_elem > 0:
+
+        b_src = []
+        b_tgt = []
+        len_src = []
+        len_tgt = []
+
+        count = 0
+        while count < size and nb_elem > 0:
+            ind = indices.pop()
+            count += 1
+            nb_elem -= 1
+
+            b_src.append(src[ind])
+            b_tgt.append(tgt[ind])
+            len_src.append(len(src[ind]))
+            len_tgt.append(len(tgt[ind]))
+
+        # we need to fill shorter sentences to make tensor
+        max_src = max(len_src)
+        max_tgt = max(len_tgt)
+
+        b_src_ = [fill_seq(seq, max_src, PAD_token) for seq in b_src]
+        b_tgt_ = [fill_seq(seq, max_tgt, PAD_token) for tgt in b_tgt]
+
+        # create pytorch variable, transpose to have (seq, batch)
+        batch_src = Variable(torch.LongTensor(b_src_).t())
+        batch_tgt = Variable(torch.LongTensor(b_tgt_).t())
+
+        if cuda:
+            batch_src = batch_src.cuda()
+            batch_tgt = batch_tgt.cuda()
+
+        yield batch_src, batch_tgt, len_src, len_tgt
+
+
 def train_epoch():
     # Turn on training mode which enables dropout.
     total_loss = 0
     start_time = time.time()
 
-    # one example at the time to test
-    r = range(len(train_src))
-    random.shuffle(r)
-    for n_batch, batch_id in enumerate(r):
+    # initialize minibatch generator
+    minibatches = minibatch_generator(args.batch_size, corpus.train, args.cuda)
+    for n_batch, batch in enumerate(minibatches):
 
-        batch_src = train_src[batch_id]
-        batch_tgt = train_tgt[batch_id]
-
-        loss = train_step(encoder, decoder, batch_src, batch_tgt, enc_optim,
-                          dec_optim, criterion, SOS_token=2, EOS_token=1,
-                          PAD_token=0, cuda=arg.cuda, max_length=50,
+        loss = train_step(encoder, decoder, batch, enc_optim, dec_optim,
+                          criterion, cuda=args.cuda, max_length=50,
                           clip=args.clip)
 
         total_loss += loss
