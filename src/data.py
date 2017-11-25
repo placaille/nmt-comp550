@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
+import pdb
 import re
 import torch
+from torch.autograd import Variable
 
 class Dictionary(object):
     def __init__(self):
@@ -25,8 +27,9 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, path, lang):
+    def __init__(self, path, lang, cuda):
 
+        self.cuda = cuda
         path = os.path.join(path, lang)
 
         self.dictionary = {'src': Dictionary(), 'tgt': Dictionary()}
@@ -76,16 +79,22 @@ class Corpus(object):
 
         # Tokenize file content
         with open(path, 'r') as f:
-            ids = torch.LongTensor(max_tokens, sentences).zero_()
+            ids = []
             for i, line in enumerate(f):
-                token = 0
                 line = line.decode('utf-8', 'strict')
                 words = re.findall(r"[\w']+|[.,!?;]", line.lower(),
                         flags=re.UNICODE) + [u'<eos>']
+
+                token = 0
+                idx = Variable(torch.LongTensor(len(words)).zero_())
+                idx = idx.cuda() if self.cuda else False
                 for word in words:
                     if word not in self.dictionary[src_tgt].vocab_set:
                         word = u'<unk>'
-                    ids[token, i] = self.dictionary[src_tgt].word2idx[word]
+                    idx[token] = self.dictionary[src_tgt].word2idx[word]
                     token += 1
+
+                # create list of Tensors for easier process later on
+                ids.append(idx)
 
         return ids
