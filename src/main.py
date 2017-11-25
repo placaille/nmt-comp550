@@ -102,7 +102,7 @@ dec_optim = torch.optim.Adam(decoder.parameters(), args.lr)
 
 def train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim,
                criterion, SOS_token=1, EOS_token=0, cuda=True, max_length=50,
-               clip_norm=0):
+               clip=0):
 
     n_step = batch_tgt.size(0)
 
@@ -143,9 +143,9 @@ def train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim,
 
     # update params
     loss.backward()
-    if clip_norm:
-        nn.utils.clip_grad_norm(encoder.parameters(), clip_norm)
-        nn.utils.clip_grad_norm(decoder.parameters(), clip_norm)
+    if clip:
+        nn.utils.clip_grad_norm(encoder.parameters(), clip)
+        nn.utils.clip_grad_norm(decoder.parameters(), clip)
     enc_optim.step()
     dec_optim.step()
 
@@ -160,23 +160,24 @@ def train_epoch():
     # one example at the time to test
     r = range(len(train_src))
     random.shuffle(r)
-    for batch_id in r:
+    for n_batch, batch_id in enumerate(r):
 
         batch_src = train_src[batch_id]
         batch_tgt = train_tgt[batch_id]
 
-        loss = train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim, criterion,
-                          SOS_token=1, EOS_token=0, cuda=True, max_length=50,
-                          clip_norm=None)
+        loss = train_step(encoder, decoder, batch_src, batch_tgt, enc_optim,
+                          dec_optim, criterion, SOS_token=2, EOS_token=1,
+                          PAD_token=0, cuda=arg.cuda, max_length=50,
+                          clip=args.clip)
 
         total_loss += loss
 
-        if batch_id % args.log_interval == 0 and batch_id > 0:
+        if n_batch % args.log_interval == 0 and n_batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch_id, len(train_src) // args.batch_size, args.lr,
+                epoch, n_batch, len(train_src) // args.batch_size, args.lr,
                 elapsed * 1000 / args.log_interval, cur_loss, np.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()

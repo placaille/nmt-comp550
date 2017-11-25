@@ -20,4 +20,5 @@ python $python_script \
 	--save $save_dir/$run_name \
 	--lang en-fr \
 	--verbose \
-	--batch_size 1
+	--batch_size 1 \
+	--lr 0.01
