@@ -1,6 +1,7 @@
 # coding: utf-8
 import pdb
 import argparse
+import random
 import time
 import math
 import torch
@@ -28,8 +29,6 @@ parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
-parser.add_argument('--bptt', type=int, default=35,
-                    help='sequence length')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
@@ -56,19 +55,21 @@ if torch.cuda.is_available():
 ###############################################################################
 # Load data
 ###############################################################################
+
 if args.verbose:
     print('Processing data..')
-corpus = data.Corpus(args.data, args.lang)
+corpus = data.Corpus(args.data, args.lang, args.cuda)
 
-if args.cuda:
-    train_src, train_tgt = corpus.train[0].cuda(), corpus.train[1].cuda()
-    valid_src, valid_tgt = corpus.valid[0].cuda(), corpus.valid[1].cuda()
-    test_src, test_tgt = corpus.test[0].cuda(), corpus.test[1].cuda()
+train_src, train_tgt = corpus.train
+valid_src, valid_tgt = corpus.valid
+test_src, test_tgt = corpus.test
 
 ###############################################################################
 # Build the model
 ###############################################################################
 
+if args.verbose:
+    print('Building model..')
 encoder = model.EncoderRNN(args.model,
                            len(corpus.dictionary['src']),
                            args.nhid,
@@ -89,49 +90,98 @@ if args.verbose:
     print(encoder)
     print(decoder)
 
-# test encoder/decoder with fake data
-# test_words = Variable(torch.LongTensor(13, 20).zero_().cuda())
-# h0 = encoder.init_hidden()
-# enc_out, enc_hid = encoder(test_words, h0)
-# dec_h0 = enc_hid
-# dec_words = Variable(torch.LongTensor(1, 20).zero_().cuda())
-# dec_out, dec_hid = decoder(dec_words, dec_h0)
-pdb.set_trace()
-
-criterion = nn.CrossEntropyLoss()
+criterion = nn.NLLLoss()
+enc_optim = torch.optim.Adam(encoder.parameters(), args.lr)
+dec_optim = torch.optim.Adam(decoder.parameters(), args.lr)
 
 ###############################################################################
 # Training code
 ###############################################################################
 
-def repackage_hidden(h):
-    """Wraps hidden states in new Variables, to detach them from their history."""
-    if type(h) == Variable:
-        return Variable(h.data)
-    else:
-        return tuple(repackage_hidden(v) for v in h)
+def train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim,
+               criterion, SOS_token=1, EOS_token=0, cuda=True, max_length=50,
+               clip_norm=0):
+
+    n_step = batch_tgt.size(0)
+
+    batch_src.unsqueeze(1)
+    batch_tgt.unsqueeze(1)
+
+    dec_input = Variable(torch.LongTensor([SOS_token]))
+
+    if cuda:
+        batch_src = batch_src.cuda()
+        batch_tgt = batch_tgt.cuda()
+        dec_input = dec_input.cuda()
+
+    loss = 0
+    enc_optim.zero_grad()
+    dec_optim.zero_grad()
+
+    enc_h0 = encoder.init_hidden()
+
+    # run src sentence in encoder and get final state
+    enc_out, enc_hid = encoder(batch_src, enc_h0)
+    dec_hid = enc_hid
+
+    # decode by looping time steps
+    for step in xrange(n_step):
+        dec_out, dec_hid = decoder(dec_input, dec_hid)
+
+        # get highest scoring token and value
+        top_val, top_tok = dec_out.data.topk(1)
+
+        # compute loss
+        loss += criterion(dec_out, batch_tgt[step])
+
+        # test if predicting end of sentence
+        if top_tok[0][0] == EOS_token:
+            break
+        dec_input = Variable(top_tok)
+
+    # update params
+    loss.backward()
+    if clip_norm:
+        nn.utils.clip_grad_norm(encoder.parameters(), clip_norm)
+        nn.utils.clip_grad_norm(decoder.parameters(), clip_norm)
+    enc_optim.step()
+    dec_optim.step()
+
+    return loss.data[0]
 
 
-# get_batch subdivides the source data into chunks of length args.bptt.
-# If source is equal to the example output of the batchify function, with
-# a bptt-limit of 2, we'd get the following two Variables for i = 0:
-# ┌ a g m s ┐ ┌ b h n t ┐
-# └ b h n t ┘ └ c i o u ┘
-# Note that despite the name of the function, the subdivison of data is not
-# done along the batch dimension (i.e. dimension 1), since that was handled
-# by the batchify function. The chunks are along dimension 0, corresponding
-# to the seq_len dimension in the LSTM.
+def train_epoch():
+    # Turn on training mode which enables dropout.
+    total_loss = 0
+    start_time = time.time()
 
-def get_batch(source, i, evaluation=False):
-    seq_len = min(args.bptt, len(source) - 1 - i)
-    data = Variable(source[i:i+seq_len], volatile=evaluation)
-    target = Variable(source[i+1:i+1+seq_len].view(-1))
-    return data, target
+    # one example at the time to test
+    r = range(len(train_src))
+    random.shuffle(r)
+    for batch_id in r:
+
+        batch_src = train_src[batch_id]
+        batch_tgt = train_tgt[batch_id]
+
+        loss = train_step(encoder, decoder, batch_src, batch_tgt, enc_optim, dec_optim, criterion,
+                          SOS_token=1, EOS_token=0, cuda=True, max_length=50,
+                          clip_norm=None)
+
+        total_loss += loss
+
+        if batch_id % args.log_interval == 0 and batch_id > 0:
+            cur_loss = total_loss[0] / args.log_interval
+            elapsed = time.time() - start_time
+            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
+                    'loss {:5.2f} | ppl {:8.2f}'.format(
+                epoch, batch_id, len(train_src) // args.bptt, lr,
+                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
+            total_loss = 0
+            start_time = time.time()
 
 
 def evaluate(data_source):
     # Turn on evaluation mode which disables dropout.
-    model.eval()
     total_loss = 0
     ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(eval_batch_size)
@@ -144,49 +194,14 @@ def evaluate(data_source):
     return total_loss[0] / len(data_source)
 
 
-def train():
-    # Turn on training mode which enables dropout.
-    model.train()
-    total_loss = 0
-    start_time = time.time()
-    ntokens = len(corpus.dictionary)
-    hidden = model.init_hidden(args.batch_size)
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
-        data, targets = get_batch(train_data, i)
-        # Starting each batch, we detach the hidden state from how it was previously produced.
-        # If we didn't, the model would try backpropagating all the way to start of the dataset.
-        hidden = repackage_hidden(hidden)
-        model.zero_grad()
-        output, hidden = model(data, hidden)
-        loss = criterion(output.view(-1, ntokens), targets)
-        loss.backward()
-
-        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        torch.nn.utils.clip_grad_norm(model.parameters(), args.clip)
-        for p in model.parameters():
-            p.data.add_(-lr, p.grad.data)
-
-        total_loss += loss.data
-
-        if batch % args.log_interval == 0 and batch > 0:
-            cur_loss = total_loss[0] / args.log_interval
-            elapsed = time.time() - start_time
-            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch, len(train_data) // args.bptt, lr,
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
-            total_loss = 0
-            start_time = time.time()
-
 # Loop over epochs.
-lr = args.lr
 best_val_loss = None
 
 # At any point you can hit Ctrl + C to break out of training early.
 try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
-        train()
+        train_epoch()
         val_loss = evaluate(val_data)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '

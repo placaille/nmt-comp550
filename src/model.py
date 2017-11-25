@@ -21,7 +21,7 @@ class EncoderRNN(nn.Module):
             self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
 
     def forward(self, input, hidden):
-        output = self.embedding(input)
+        output = self.embedding(input).view(input.size(0), 1, -1)
         for i in xrange(self.n_layers):
             output, hidden = self.rnn(output, hidden)
         return output, hidden
@@ -56,7 +56,7 @@ class DecoderRNN(nn.Module):
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input, hidden):
-        output = self.embedding(input)
+        output = self.embedding(input).view(1, 1, -1)
         for i in xrange(self.n_layers):
             output = F.relu(output)
             output, hidden = self.rnn(output, hidden)
