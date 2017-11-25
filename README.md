@@ -1,8 +1,10 @@
 # nmt-comp550
 
 This repo is built on top and highly inspired by pytorch's
-word\_language\_model example. See [this
-repo](https://github.com/pytorch/examples/tree/master/word_language_model)
+word\_language\_model example, and their seq2seq tutorial. See [this
+repo](https://github.com/pytorch/examples/tree/master/word_language_model) and
+[the
+doc](http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html)
 for reference.
 
 ## The task is the WMT17 multimodal (task 1)
