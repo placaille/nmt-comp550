@@ -52,6 +52,10 @@ class Corpus(object):
         self.valid = (valid_src, valid_tgt)
         self.test = (test_src, test_tgt)
 
+        self.n_sent_train = len(train_src)
+        self.n_sent_valid = len(valid_src)
+        self.n_sent_test = len(test_src)
+
     def tokenize(self, path, src_tgt):
         """Tokenizes a text file."""
         assert os.path.exists(path)
