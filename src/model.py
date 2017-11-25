@@ -65,10 +65,11 @@ class DecoderRNN(nn.Module):
         for i in xrange(self.n_layers):
             output = F.relu(output)
             output, hidden = self.rnn(output, hidden)
-        output = self.softmax(self.out(output[0]))
+        output = self.out(output.view(input.size(0), -1))
         return output, hidden
 
     def init_hidden(self):
+        # TODO fix changing batch size at end of epoch
         weight = next(self.parameters()).data
         n, b, e = self.n_layers, self.batch_size, self.hidden_size
         if self.rnn_type == 'LSTM':
