@@ -103,16 +103,16 @@ class Attention(nn.Module):
             attn_score = torch.cat((hidden, hs_encoder[i]), dim=-1) # bs x 2dim
             attn_score = self.attention(attn_score) # bs x dim
             attn_score = torch.mm(attn_score, self.vector) # bs x 1
-            attn[:, i] = attn_score
+            attn[:, i] = attn_score.squeeze()
 
-        return F.softmax(attn).unsqueeze(1) # bs x 1 x length 
+        return F.softmax(attn, dim=1).unsqueeze(1) # bs x 1 x length 
 
 
 class AttentionDecoderRNN(nn.Module):
     def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
                     max_length=50, n_layers=2, dropout_p=0.1):
         super(AttentionDecoderRNN, self).__init__()
-        
+
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.batch_size  = batch_size
