@@ -15,10 +15,9 @@ string="$(date) - Running on $(hostname) - $run_name"
 echo $string
 echo $string >> logs
 python $python_script \
-	--cuda \
 	--data $data_dir \
 	--save $save_dir/$run_name \
 	--lang en-fr \
 	--verbose \
 	--batch_size 20 \
-	--lr 0.01
+	--lr 0.005

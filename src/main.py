@@ -15,7 +15,7 @@ import data
 import model
 
 parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
-parser.add_argument('--data', type=str, default='./data/multi30k',
+parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
@@ -24,7 +24,7 @@ parser.add_argument('--nhid', type=int, default=200,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
-parser.add_argument('--lr', type=float, default=20,
+parser.add_argument('--lr', type=float, default=1e-3,
                     help='initial learning rate')
 parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
@@ -34,10 +34,14 @@ parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
-parser.add_argument('--cuda', action='store_true',
+parser.add_argument('--cuda', type=bool, default=True, #action='store_true',
                     help='use CUDA')
-parser.add_argument('--log-interval', type=int, default=200, metavar='N',
+parser.add_argument('--max_length', type=int, default=50, metavar='N',
+                    help='maximal sentence length')
+parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='report interval')
+parser.add_argument('--use-attention', type=bool, default=False, metavar='N',
+                    help='use attention mechanism in the decoder')
 parser.add_argument('--save', type=str,  default='model.pt',
                     help='path to save the final model')
 parser.add_argument('--lang', type=str,  default='en-fr',
@@ -75,7 +79,16 @@ encoder = model.EncoderRNN(args.model,
                            args.batch_size,
                            args.nlayers)
 
-decoder = model.DecoderRNN(args.model,
+if args.use_attention : 
+    decoder = model.AttentionDecoderRNN(
+                           args.model, 
+                           args.nhid, 
+                           len(corpus.dictionary['tgt']),
+                           args.batch_size, 
+                           args.nlayers)
+else : 
+    decoder = model.DecoderRNN(
+                           args.model,
                            args.nhid,
                            len(corpus.dictionary['tgt']),
                            args.batch_size,
@@ -97,8 +110,8 @@ dec_optim = torch.optim.Adam(decoder.parameters(), args.lr)
 # Training code
 ###############################################################################
 
-def train_step(encoder, decoder, batch, enc_optim, dec_optim,
-               criterion, cuda=True, max_length=50, clip=0):
+def step(encoder, decoder, batch, enc_optim, dec_optim, criterion, 
+                train=True, cuda=True, max_length=args.max_length, clip=0):
 
     PAD_token = 2
     SOS_token = 1
@@ -116,8 +129,13 @@ def train_step(encoder, decoder, batch, enc_optim, dec_optim,
         batch_tgt.unsqueeze(1)
 
     loss = 0
-    enc_optim.zero_grad()
-    dec_optim.zero_grad()
+
+    if train : 
+        enc_optim.zero_grad()
+        dec_optim.zero_grad()
+    else : 
+        for p in encoder.parameters() + decoder.parameters():
+            p.requires_grad = False
 
     enc_h0 = encoder.init_hidden()
 
@@ -135,7 +153,10 @@ def train_step(encoder, decoder, batch, enc_optim, dec_optim,
 
     # decode by looping time steps
     for step in xrange(max_tgt):
-        dec_out, dec_hid = decoder(dec_input, dec_hid)
+        if args.use_attention : 
+            dec_out, dec_hid, _ = decoder(dec_input, dec_hid, enc_out)
+        else :
+            dec_out, dec_hid = decoder(dec_input, dec_hid)
 
         # get highest scoring token and value
         top_val, top_tok = dec_out.data.topk(1, dim=1)
@@ -149,7 +170,7 @@ def train_step(encoder, decoder, batch, enc_optim, dec_optim,
                                 len_tgt)
 
     # update params
-    loss.backward()
+    if train : loss.backward()
     if clip:
         nn.utils.clip_grad_norm(encoder.parameters(), clip)
         nn.utils.clip_grad_norm(decoder.parameters(), clip)
@@ -222,6 +243,9 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
 
 def train_epoch():
     # Turn on training mode which enables dropout.
+    encoder.train()
+    decoder.train()
+    
     total_loss = 0
     start_time = time.time()
 
@@ -229,16 +253,15 @@ def train_epoch():
     minibatches = minibatch_generator(args.batch_size, corpus.train, args.cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        loss = train_step(encoder, decoder, batch, enc_optim, dec_optim,
-                          criterion, cuda=args.cuda, max_length=50,
-                          clip=args.clip)
+        loss = step(encoder, decoder, batch, enc_optim, dec_optim, criterion, 
+                        train=True, cuda=args.cuda, max_length=50, clip=args.clip)
 
         total_loss += loss
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
+            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.4f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
                 epoch, n_batch, corpus.n_sent_train // args.batch_size, args.lr,
                 elapsed * 1000 / args.log_interval, cur_loss, np.exp(cur_loss)))
@@ -248,17 +271,28 @@ def train_epoch():
 
 def evaluate(data_source):
     # Turn on evaluation mode which disables dropout.
+    encoder.eval()
+    decoder.eval()
     total_loss = 0
-    ntokens = len(corpus.dictionary)
-    hidden = model.init_hidden(eval_batch_size)
-    for i in range(0, data_source.size(0) - 1, args.bptt):
-        data, targets = get_batch(data_source, i, evaluation=True)
-        output, hidden = model(data, hidden)
-        output_flat = output.view(-1, ntokens)
-        total_loss += len(data) * criterion(output_flat, targets).data
-        hidden = repackage_hidden(hidden)
-    return total_loss / len(data_source)
+    start_time = time.time()
 
+    # initialize minibatch generator
+    minibatches = minibatch_generator(args.batch_size, corpus.valid, args.cuda)
+    for n_batch, batch in enumerate(minibatches):
+
+        loss = step(encoder, decoder, batch, enc_optim, dec_optim, criterion, 
+                        train=True, cuda=args.cuda, max_length=50, clip=args.clip)
+
+        total_loss += loss
+
+    
+    cur_loss = total_loss / n_batch
+    elapsed = time.time() - start_time
+    print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.4f} | ms/batch {:5.2f} | '
+            'loss {:5.2f} | ppl {:8.2f}'.format(
+        epoch, n_batch, corpus.n_sent_valid // args.batch_size, args.lr,
+        elapsed * 1000 / args.log_interval, total_loss, np.exp(total_loss)))
+    
 
 if args.verbose:
     print('Starting training..')
@@ -270,7 +304,7 @@ try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_epoch()
-        # val_loss = evaluate(val_data)
+        val_loss = evaluate(val_data)
         val_loss = 0
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '

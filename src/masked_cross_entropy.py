@@ -1,6 +1,7 @@
 import torch
 from torch.nn import functional
 from torch.autograd import Variable
+import torch.nn as nn
 
 def sequence_mask(sequence_length, max_len=None):
     if max_len is None:
@@ -37,7 +38,11 @@ def masked_cross_entropy(logits, target, length):
     # logits_flat: (batch * max_len, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # log_probs_flat: (batch * max_len, num_classes)
-    log_probs_flat = functional.log_softmax(logits_flat, dim=1)
+    try : 
+        log_probs_flat = functional.log_softmax(logits_flat, dim=1)
+    except :
+        # It seems that by default log_softmax sums to 1 along last dimension
+        log_probs_flat = functional.log_softmax(logits_flat)
     # target_flat: (batch * max_len, 1)
     target_flat = target.view(-1, 1)
     # losses_flat: (batch * max_len, 1)

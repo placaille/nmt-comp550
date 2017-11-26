@@ -77,3 +77,82 @@ class DecoderRNN(nn.Module):
                     Variable(weight.new(n, b, e).zero_()))
         else:
             return Variable(weight.new(n, b, e).zero_())
+
+
+class Attention(nn.Module):
+    def __init__(self, hidden_size, batch_size):
+        super(Attention, self).__init__()
+
+        self.attention = nn.Linear(hidden_size*2, hidden_size)
+        self.vector    = nn.Parameter(torch.FloatTensor(hidden_size, 1))
+
+    def forward(self, hidden, hs_encoder):
+        length, bs = hs_encoder.size(0), hs_encoder.size(1)
+        attn = Variable(torch.zeros(bs, length))
+
+        if hs_encoder.is_cuda :
+            attn = attn.cuda()
+
+        # we consider one "word" from the decoder at a time
+        if len(hidden.size()) == 3 : 
+            assert hidden.size(0) == 1 
+            hidden = hidden[0]
+
+        # we iterate over the encoder's states
+        for i in xrange(length):
+            attn_score = torch.cat((hidden, hs_encoder[i]), dim=-1) # bs x 2dim
+            attn_score = self.attention(attn_score) # bs x dim
+            attn_score = torch.mm(attn_score, self.vector) # bs x 1
+            attn[:, i] = attn_score
+
+        return F.softmax(attn).unsqueeze(1) # bs x 1 x length 
+
+
+class AttentionDecoderRNN(nn.Module):
+    def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
+                    max_length=50, n_layers=2, dropout_p=0.1):
+        super(AttentionDecoderRNN, self).__init__()
+        
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.batch_size  = batch_size
+        self.n_layers    = n_layers
+        self.rnn_type    = rnn_type
+        self.dropout_p   = dropout_p
+
+        self.embedding    = nn.Embedding(output_size, hidden_size)
+        self.attn         = Attention(hidden_size, batch_size)
+        self.dropout      = nn.Dropout(dropout_p)
+        self.out          = nn.Linear(hidden_size, output_size)
+        self.concat       = nn.Linear(hidden_size*2, hidden_size)
+
+        if rnn_type == 'GRU':
+            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers)
+        elif rnn_type == 'LSTM':
+            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
+
+
+    def forward(self, input, hidden, encoder_outputs):
+
+        embedded = self.embedding(input).view(1, input.size(0), -1)
+        embedded = self.dropout(embedded)
+
+        output, hidden = self.rnn(embedded, hidden)
+
+        attn_weights = self.attn(output, encoder_outputs)
+        context = attn_weights.bmm(encoder_outputs.transpose(0,1))
+
+        output = output.squeeze(0)
+        context = context.squeeze(1)
+        concat_input = torch.cat((output, context), 1)
+        concat_output = F.tanh(self.concat(concat_input))
+
+        out = self.out(concat_output)
+
+        return out, hidden, attn_weights
+        
+        
+    def initHidden(self):
+        raise NotImplementedError('function not implemented, as we only need \
+                to pass in the encoder\'s hidden state to init the decoder')
+        
