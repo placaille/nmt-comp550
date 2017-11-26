@@ -103,8 +103,9 @@ if args.verbose:
     print(decoder)
 
 criterion = nn.NLLLoss()
-enc_optim = torch.optim.Adam(encoder.parameters(), args.lr)
-dec_optim = torch.optim.Adam(decoder.parameters(), args.lr)
+lr = args.lr
+enc_optim = torch.optim.Adam(encoder.parameters(), lr)
+dec_optim = torch.optim.Adam(decoder.parameters(), lr)
 
 ###############################################################################
 # Training code
@@ -250,7 +251,7 @@ def train_epoch():
     # Turn on training mode which enables dropout.
     encoder.train()
     decoder.train()
-    
+
     total_loss = 0
     start_time = time.time()
 
@@ -268,7 +269,7 @@ def train_epoch():
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.4f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, n_batch, corpus.n_sent_train // args.batch_size, args.lr,
+                epoch, n_batch, corpus.n_sent_train // args.batch_size, lr,
                 elapsed * 1000 / args.log_interval, cur_loss, np.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
@@ -289,13 +290,12 @@ def evaluate():
         try:
             loss = step(encoder, decoder, batch, None, None, criterion,
                         train=False, cuda=args.cuda, max_length=50)
-
-            total_loss += loss
-            iters += 1
         except:
             loss = 0
 
-        print('loss : %s' % loss)
+        total_loss += loss
+        iters += 1
+
     loss = total_loss / iters
     return loss
 
