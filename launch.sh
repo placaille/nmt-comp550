@@ -22,7 +22,7 @@ python $python_script \
 	--save $save_dir \
 	--lang en-fr \
 	--verbose \
-	--batch_size 20 \
-	--epochs 10 \
+	--batch_size 100 \
+	--epochs 1 \
 	--lr 0.005
 	# --use-attention

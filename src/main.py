@@ -129,10 +129,9 @@ def train_epoch():
 
     for n_batch, batch in enumerate(minibatches):
 
-        loss, start_time = utils.step(encoder, decoder, batch, enc_optim,
-                                      dec_optim, criterion, args.use_attention,
-                                      True, args.cuda, args.max_length,
-                                      args.clip)
+        loss, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim,
+                             criterion, args.use_attention, True, args.cuda,
+                             args.max_length, args.clip)
 
         total_loss += loss
 

@@ -206,7 +206,6 @@ def evaluate(dataset, encoder, decoder, batch_size, use_attention, cuda, criteri
 
     total_loss = 0
     iters = 0
-    start_time = time.time()
 
     # initialize minibatch generator
     minibatches = minibatch_generator(batch_size, dataset, cuda)
@@ -223,4 +222,4 @@ def evaluate(dataset, encoder, decoder, batch_size, use_attention, cuda, criteri
         iters += 1
 
     loss = total_loss / iters
-    return loss, start_time
+    return loss
