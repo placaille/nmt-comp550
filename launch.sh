@@ -24,5 +24,5 @@ python $python_script \
 	--verbose \
 	--batch_size 20 \
 	--epochs 10 \
-	--lr 0.005 \
-	--use-attention
+	--lr 0.005
+	# --use-attention
