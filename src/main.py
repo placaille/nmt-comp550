@@ -134,8 +134,8 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, criterion,
         enc_optim.zero_grad()
         dec_optim.zero_grad()
     else : 
-        for p in encoder.parameters() + decoder.parameters():
-            p.requires_grad = False
+        kill_gradient(encoder)
+        kill_gradient(decoder)
 
     enc_h0 = encoder.init_hidden()
 
@@ -170,15 +170,20 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, criterion,
                                 len_tgt)
 
     # update params
-    if train : loss.backward()
-    if clip:
-        nn.utils.clip_grad_norm(encoder.parameters(), clip)
-        nn.utils.clip_grad_norm(decoder.parameters(), clip)
-    enc_optim.step()
-    dec_optim.step()
+    if train : 
+        loss.backward()
+        if clip:
+            nn.utils.clip_grad_norm(encoder.parameters(), clip)
+            nn.utils.clip_grad_norm(decoder.parameters(), clip)
+        enc_optim.step()
+        dec_optim.step()
 
     return loss.data[0]
 
+
+def kill_gradient(model):
+    for p in model.parameters():
+        p.requires_grad = False
 
 def minibatch_generator(size, dataset, cuda, shuffle=True):
     """
@@ -269,29 +274,30 @@ def train_epoch():
             start_time = time.time()
 
 
-def evaluate(data_source):
+def evaluate():
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
     decoder.eval()
     total_loss = 0
+    iters = 0
     start_time = time.time()
 
     # initialize minibatch generator
     minibatches = minibatch_generator(args.batch_size, corpus.valid, args.cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        loss = step(encoder, decoder, batch, enc_optim, dec_optim, criterion, 
-                        train=True, cuda=args.cuda, max_length=50, clip=args.clip)
+        try : 
+            loss = step(encoder, decoder, batch, None, None, criterion, 
+                        train=False, cuda=args.cuda, max_length=50)
 
-        total_loss += loss
+            total_loss += loss
+            iters += 1
+        except : 
+            pass
 
-    
-    cur_loss = total_loss / n_batch
-    elapsed = time.time() - start_time
-    print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.4f} | ms/batch {:5.2f} | '
-            'loss {:5.2f} | ppl {:8.2f}'.format(
-        epoch, n_batch, corpus.n_sent_valid // args.batch_size, args.lr,
-        elapsed * 1000 / args.log_interval, total_loss, np.exp(total_loss)))
+        print('loss : %s' % loss) 
+    loss = total_loss / iters
+    return loss
     
 
 if args.verbose:
@@ -303,9 +309,8 @@ best_val_loss = None
 try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
-        train_epoch()
-        val_loss = evaluate(val_data)
-        val_loss = 0
+        # train_epoch()
+        val_loss = evaluate() 
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
