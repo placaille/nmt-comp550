@@ -34,13 +34,13 @@ parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
-parser.add_argument('--cuda', type=bool, default=True, #action='store_true',
+parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--max_length', type=int, default=50, metavar='N',
                     help='maximal sentence length')
 parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='report interval')
-parser.add_argument('--use-attention', type=bool, default=False, metavar='N',
+parser.add_argument('--use-attention', action='store_true',
                     help='use attention mechanism in the decoder')
 parser.add_argument('--save', type=str,  default='model.pt',
                     help='path to save the final model')
@@ -79,14 +79,14 @@ encoder = model.EncoderRNN(args.model,
                            args.batch_size,
                            args.nlayers)
 
-if args.use_attention : 
+if args.use_attention:
     decoder = model.AttentionDecoderRNN(
                            args.model, 
                            args.nhid, 
                            len(corpus.dictionary['tgt']),
                            args.batch_size, 
                            args.nlayers)
-else : 
+else:
     decoder = model.DecoderRNN(
                            args.model,
                            args.nhid,
@@ -286,19 +286,19 @@ def evaluate():
     minibatches = minibatch_generator(args.batch_size, corpus.valid, args.cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        try : 
-            loss = step(encoder, decoder, batch, None, None, criterion, 
+        try:
+            loss = step(encoder, decoder, batch, None, None, criterion,
                         train=False, cuda=args.cuda, max_length=50)
 
             total_loss += loss
             iters += 1
-        except : 
-            pass
+        except:
+            loss = 0
 
-        print('loss : %s' % loss) 
+        print('loss : %s' % loss)
     loss = total_loss / iters
     return loss
-    
+
 
 if args.verbose:
     print('Starting training..')
@@ -309,8 +309,8 @@ best_val_loss = None
 try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
-        # train_epoch()
-        val_loss = evaluate() 
+        train_epoch()
+        val_loss = evaluate()
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -333,8 +333,7 @@ with open(args.save, 'rb') as f:
     model = torch.load(f)
 
 # Run on test data.
-# test_loss = evaluate(test_data)
-test_loss = 0
+test_loss = evaluate(test_data)
 print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, np.exp(test_loss)))
