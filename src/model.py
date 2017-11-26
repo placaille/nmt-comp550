@@ -8,7 +8,7 @@ from torch.autograd import Variable
 
 class EncoderRNN(nn.Module):
     def __init__(self, rnn_type, input_size, hidden_size, batch_size,
-                 n_layers=2):
+                 n_layers=2, bidirectional=False):
         super(EncoderRNN, self).__init__()
 
         self.input_size = input_size
@@ -19,9 +19,11 @@ class EncoderRNN(nn.Module):
 
         self.embedding = nn.Embedding(input_size, hidden_size)
         if rnn_type == 'GRU':
-            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers)
+            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers, 
+                    bidirectional=bidirectional)
         elif rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
+            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers, 
+                    bidirectional=bidirectional)
 
     def forward(self, input, hidden, input_lengths):
         embedding = self.embedding(input)
@@ -105,8 +107,8 @@ class Attention(nn.Module):
             attn_score = torch.mm(attn_score, self.vector) # bs x 1
             attn[:, i] = attn_score.squeeze()
 
-        return F.softmax(attn, dim=1).unsqueeze(1) # bs x 1 x length 
-
+        # return F.softmax(attn, dim=1).unsqueeze(1) # bs x 1 x length 
+        return F.softmax(attn).unsqueeze(1)
 
 class AttentionDecoderRNN(nn.Module):
     def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
