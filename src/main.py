@@ -135,9 +135,6 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, criterion,
     if train : 
         enc_optim.zero_grad()
         dec_optim.zero_grad()
-    else : 
-        kill_gradient(encoder)
-        kill_gradient(decoder)
 
     enc_h0 = encoder.init_hidden()
 
@@ -183,9 +180,10 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, criterion,
     return loss.data[0]
 
 
-def kill_gradient(model):
+def set_gradient(model, value):
     for p in model.parameters():
-        p.requires_grad = False
+        p.requires_grad = value
+
 
 def minibatch_generator(size, dataset, cuda, shuffle=True):
     """
@@ -252,6 +250,9 @@ def train_epoch():
     # Turn on training mode which enables dropout.
     encoder.train()
     decoder.train()
+    
+    set_gradient(encoder, True)
+    set_gradient(decoder, True)
 
     total_loss = 0
     start_time = time.time()
@@ -280,6 +281,10 @@ def evaluate(dataset):
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
     decoder.eval()
+
+    set_gradient(encoder, False)
+    set_gradient(decoder, False)
+
     total_loss = 0
     iters = 0
     start_time = time.time()
