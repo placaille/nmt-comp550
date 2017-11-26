@@ -9,9 +9,9 @@ else
 	run_name=$1
 fi
 
-save_dir=$out_dir/$run_name
+save_dir=$out_dir/$run_name/bin
 
-mkdir -p $save_dir/bin
+mkdir -p $save_dir
 string="$(date) - Running on $(hostname) - $run_name"
 
 echo $string
@@ -19,9 +19,10 @@ echo $string >> logs
 python $python_script \
 	--cuda \
 	--data $data_dir \
-	--save $save_dir/bin/model.pt \
+	--save $save_dir \
 	--lang en-fr \
 	--verbose \
 	--batch_size 20 \
+	--epochs 10 \
 	--lr 0.005 \
 	--use-attention

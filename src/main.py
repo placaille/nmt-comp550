@@ -1,5 +1,6 @@
 # coding: utf-8
 from __future__ import division
+import os
 import pdb
 import argparse
 import random
@@ -275,7 +276,7 @@ def train_epoch():
             start_time = time.time()
 
 
-def evaluate():
+def evaluate(dataset):
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
     decoder.eval()
@@ -284,7 +285,7 @@ def evaluate():
     start_time = time.time()
 
     # initialize minibatch generator
-    minibatches = minibatch_generator(args.batch_size, corpus.valid, args.cuda)
+    minibatches = minibatch_generator(args.batch_size, dataset, args.cuda)
     for n_batch, batch in enumerate(minibatches):
 
         try:
@@ -310,7 +311,7 @@ try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_epoch()
-        val_loss = evaluate()
+        val_loss = evaluate(corpus.valid)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -318,8 +319,10 @@ try:
         print('-' * 89)
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
-            with open(args.save, 'wb') as f:
-                torch.save(model, f)
+            with open(os.path.join(args.save, 'encoder.pt'), 'wb') as f:
+                torch.save(encoder, f)
+            with open(os.path.join(args.save, 'decoder.pt'), 'wb') as f:
+                torch.save(decoder, f)
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
@@ -329,11 +332,13 @@ except KeyboardInterrupt:
     print('Exiting from training early')
 
 # Load the best saved model.
-with open(args.save, 'rb') as f:
-    model = torch.load(f)
+with open(os.path.join(args.save, 'encoder.pt'), 'rb') as f:
+    encoder = torch.load(f)
+with open(os.path.join(args.save, 'decoder.pt'), 'rb') as f:
+    decoder = torch.load(f)
 
 # Run on test data.
-test_loss = evaluate(test_data)
+test_loss = evaluate(corpus.test)
 print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, np.exp(test_loss)))
