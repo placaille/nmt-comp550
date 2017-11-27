@@ -96,7 +96,7 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
             tokens = [dictionary.idx2word[x] for x in preds[:, i]]
 
             # filter out all the padding of u'<sos>'
-            corpus.append(' '.join(filter(lambda x: x != u'<sos>', tokens)))
+            corpus.append(' '.join(filter(lambda x: x != u'<pad>', tokens)))
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
             elapsed = time.time() - start_time

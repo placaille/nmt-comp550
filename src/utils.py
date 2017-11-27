@@ -65,9 +65,8 @@ def masked_cross_entropy(logits, target, length):
 def step(encoder, decoder, batch, enc_optim, dec_optim,
          train=True, cuda=True, max_length=50, clip=0, tf_p=0.):
 
-    PAD_token = 2
-    SOS_token = 1
-    EOS_token = 0
+    PAD_token = 0
+    SOS_token = 2
 
     batch_src, batch_tgt, len_src, len_tgt = batch
 
@@ -147,9 +146,7 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
     """
     Generator used to feed the minibatches
     """
-    PAD_token = 2
-    SOS_token = 1
-    EOS_token = 0
+    PAD_token = 0
 
     def fill_seq(input, padded_length, fill_token):
         input += [fill_token] * (padded_length - len(input))

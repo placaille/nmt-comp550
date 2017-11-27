@@ -87,8 +87,8 @@ encoder = model.EncoderRNN(args.model,
 
 if args.use_attention:
     decoder = model.AttentionDecoderRNN(
-                           args.model, 
-                           args.nhid, 
+                           args.model,
+                           args.nhid,
                            len(corpus.dictionary['tgt']),
                            args.batch_size, 
                            args.nlayers)
