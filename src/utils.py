@@ -85,6 +85,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     if train:
         enc_optim.zero_grad()
         dec_optim.zero_grad()
+        use_teacher_forcing = True if np.random.random() < tf_p else False
 
     enc_h0 = encoder.init_hidden(b_size)
 
@@ -102,8 +103,6 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
         dec_outs = dec_outs.cuda()
         preds = preds.cuda()
 
-    use_teacher_forcing = True if np.random.random() < tf_p else False
-    
     # decode by looping time steps
     for step in xrange(max_tgt):
         if decoder.use_attention:
