@@ -33,3 +33,8 @@ The input to the encoder is a matrix of the tokens ID for each sequence
 (columns is the batch axis). The embedding layer of pytorch maps the ID to an
 embedding of the same dimensions as the hidden state.
 
+### References
+
+One of the first if not the first seq2seq learning, they talk about the
+necessity of doing beam search. See *Decoding and Rescoring* [link to
+paper](https://arxiv.org/pdf/1409.3215v1.pdf%3B)
