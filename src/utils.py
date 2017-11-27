@@ -62,7 +62,7 @@ def masked_cross_entropy(logits, target, length):
     return loss
 
 
-def step(encoder, decoder, batch, enc_optim, dec_optim, use_attention=False,
+def step(encoder, decoder, batch, enc_optim, dec_optim,
          train=True, cuda=True, max_length=50, clip=0):
 
     PAD_token = 2
@@ -104,7 +104,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, use_attention=False,
 
     # decode by looping time steps
     for step in xrange(max_tgt):
-        if use_attention:
+        if decoder.use_attention:
             dec_out, dec_hid, _ = decoder(dec_input, dec_hid, enc_out)
         else:
             dec_out, dec_hid = decoder(dec_input, dec_hid)
@@ -199,8 +199,7 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
 
-def evaluate(dataset, encoder, decoder, batch_size, use_attention,
-             cuda, max_length):
+def evaluate(dataset, encoder, decoder, batch_size, cuda, max_length):
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
     decoder.eval()
@@ -216,7 +215,7 @@ def evaluate(dataset, encoder, decoder, batch_size, use_attention,
     for n_batch, batch in enumerate(minibatches):
 
         loss, dec_outs = step(encoder, decoder, batch, None, None,
-                              use_attention, train=False, cuda=cuda,
+                              train=False, cuda=cuda,
                               max_length=max_length)
 
         total_loss += loss

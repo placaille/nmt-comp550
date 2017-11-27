@@ -52,6 +52,7 @@ class DecoderRNN(nn.Module):
         self.batch_size = batch_size
         self.n_layers = n_layers
         self.rnn_type = rnn_type
+        self.use_attention = False
 
         self.embedding = nn.Embedding(output_size, hidden_size)
         if rnn_type == 'GRU':
@@ -112,7 +113,7 @@ class Attention(nn.Module):
 
 class AttentionDecoderRNN(nn.Module):
     def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
-                    max_length=50, n_layers=2, dropout_p=0.1):
+                 max_length=50, n_layers=2, dropout_p=0.1):
         super(AttentionDecoderRNN, self).__init__()
 
         self.hidden_size = hidden_size
@@ -121,6 +122,7 @@ class AttentionDecoderRNN(nn.Module):
         self.n_layers    = n_layers
         self.rnn_type    = rnn_type
         self.dropout_p   = dropout_p
+        self.use_attention = True
 
         self.embedding    = nn.Embedding(output_size, hidden_size)
         self.attn         = Attention(hidden_size, batch_size)
@@ -152,9 +154,3 @@ class AttentionDecoderRNN(nn.Module):
         out = self.out(concat_output)
 
         return out, hidden, attn_weights
-        
-        
-    def initHidden(self):
-        raise NotImplementedError('function not implemented, as we only need \
-                to pass in the encoder\'s hidden state to init the decoder')
-        

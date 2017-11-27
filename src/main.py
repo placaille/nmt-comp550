@@ -48,6 +48,10 @@ parser.add_argument('--verbose', action='store_true',
                     help='verbose flag')
 args = parser.parse_args()
 
+# save args
+with open(os.path.join(args.save, '../args.info'), 'w') as f:
+    f.write(args)
+
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
@@ -127,8 +131,7 @@ def train_epoch():
     for n_batch, batch in enumerate(minibatches):
 
         loss, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim,
-                             args.use_attention, True, args.cuda,
-                             args.max_length, args.clip)
+                             True, args.cuda, args.max_length, args.clip)
 
         total_loss += loss
 
@@ -154,8 +157,8 @@ try:
         epoch_start_time = time.time()
         train_epoch()
         val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder,
-                                     args.batch_size, args.use_attention,
-                                     args.cuda, args.max_length)
+                                     args.batch_size, args.cuda,
+                                     args.max_length)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
               'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -167,6 +170,7 @@ try:
                 torch.save(encoder, f)
             with open(os.path.join(args.save, 'decoder.pt'), 'wb') as f:
                 torch.save(decoder, f)
+
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
@@ -184,8 +188,7 @@ with open(os.path.join(args.save, 'decoder.pt'), 'rb') as f:
 
 # Run on test data.
 test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args.batch_size,
-                              args.use_attention, args.cuda,
-                              args.max_length)
+                              args.cuda, args.max_length)
 print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, np.exp(test_loss)))
