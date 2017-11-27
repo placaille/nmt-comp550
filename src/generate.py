@@ -100,8 +100,11 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
             gold_tokens = [dictionary.idx2word[x] for x in gold[:, i]]
 
             # filter out u'<pad>', u'<eos>'
-            pred_corpus.append(' '.join(filter(lambda x: x != u'<pad>', pred_tokens)))
-            gold_corpus.append(' '.join(filter(lambda x: x != u'<pad>', gold_tokens)))
+            filter_tokens = [u'<pad>', u'<eos>']
+            pred_corpus.append(' '.join(filter(
+                lambda x: x not in filter_tokens, pred_tokens)))
+            gold_corpus.append(' '.join(filter(
+                lambda x: x not in filter_tokens, gold_tokens)))
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
             elapsed = time.time() - start_time
