@@ -92,7 +92,7 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
                               cuda=cuda, max_length=max_length)
 
         # true target
-        gold = batch[1]
+        gold = batch[1].data
 
         for i in xrange(preds.size(1)):
             # get tokens from the predicted iindices

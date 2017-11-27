@@ -17,7 +17,6 @@ string="$(date) - Generating text on $(hostname) - $run_name"
 
 echo $string
 echo $string >> logs
-echo Starting translation..
 
 python $python_script \
 	--cuda \
