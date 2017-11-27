@@ -44,7 +44,7 @@ if args.verbose:
 corpus = data.Corpus(args.data, args.lang)
 
 ###############################################################################
-# Build the model
+# Load the model
 ###############################################################################
 
 if args.verbose:
@@ -72,7 +72,7 @@ if args.verbose:
 
 
 def make_preds(dataset, encoder, decoder, dictionary, batch_size,
-               use_attention, cuda, max_length):
+               cuda, max_length):
 
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
@@ -81,22 +81,27 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     utils.set_gradient(encoder, False)
     utils.set_gradient(decoder, False)
 
-    corpus = []
+    pred_corpus = []
+    gold_corpus = []
     start_time = time.time()
 
     minibatches = utils.minibatch_generator(batch_size, dataset, cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        _, preds = utils.step(encoder, decoder, batch, None, None,
-                              use_attention, train=False, cuda=cuda,
-                              max_length=max_length)
+        _, preds = utils.step(encoder, decoder, batch, None, None, train=False,
+                              cuda=cuda, max_length=max_length)
+
+        # true target
+        gold = batch[1]
 
         for i in xrange(preds.size(1)):
             # get tokens from the predicted iindices
-            tokens = [dictionary.idx2word[x] for x in preds[:, i]]
+            pred_tokens = [dictionary.idx2word[x] for x in preds[:, i]]
+            gold_tokens = [dictionary.idx2word[x] for x in gold[:, i]]
 
-            # filter out all the padding of u'<sos>'
-            corpus.append(' '.join(filter(lambda x: x != u'<pad>', tokens)))
+            # filter out u'<pad>', u'<eos>'
+            pred_corpus.append(' '.join(filter(lambda x: x != u'<pad>', pred_tokens)))
+            gold_corpus.append(' '.join(filter(lambda x: x != u'<pad>', gold_tokens)))
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
             elapsed = time.time() - start_time
@@ -104,31 +109,42 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
                   n_batch, elapsed * 1000 / args.log_interval))
             start_time = time.time()
 
-    return corpus
+    return pred_corpus, gold_corpus
 
-
-out_dir = os.path.join(args.path_to_model, '../preds')
 
 if args.verbose:
     print('Making predictions..')
 
+preds_dir = os.path.join(args.path_to_model, '../preds')
+gold_dir = os.path.join(args.path_to_model, '../gold')
+
 datasets = [corpus.train, corpus.valid, corpus.test]
-filenames = [os.path.join(out_dir, 'pred_train_{}.txt'.format(args.lang)),
-             os.path.join(out_dir, 'pred_valid_{}.txt'.format(args.lang)),
-             os.path.join(out_dir, 'pred_test_{}.txt'.format(args.lang))]
 
-for dataset, filename in zip(datasets, filenames):
+pred_files = [os.path.join(preds_dir, 'pred_train_{}.txt'.format(args.lang)),
+              os.path.join(preds_dir, 'pred_valid_{}.txt'.format(args.lang)),
+              os.path.join(preds_dir, 'pred_test_{}.txt'.format(args.lang))]
 
-    pred_corpus = make_preds(dataset, encoder, decoder,
-                             corpus.dictionary['tgt'],
-                             args.batch_size, args.use_attention,
-                             args.cuda, args.max_length)
+gold_files = [os.path.join(gold_dir, 'gold_train_{}.txt'.format(args.lang)),
+              os.path.join(gold_dir, 'gold_valid_{}.txt'.format(args.lang)),
+              os.path.join(gold_dir, 'gold_test_{}.txt'.format(args.lang))]
 
-    with open(filename, 'w') as f:
+for dataset, pred_file, gold_file in zip(datasets, pred_files, gold_files):
+
+    pred_corpus, gold_corpus = make_preds(dataset, encoder, decoder,
+                                          corpus.dictionary['tgt'],
+                                          args.batch_size, args.cuda,
+                                          args.max_length)
+
+    with open(pred_file, 'w') as f:
         for sentence in pred_corpus:
             f.write(sentence.encode('utf8') + '\n')
 
+    with open(gold_file, 'w') as f:
+        for sentence in gold_corpus:
+            f.write(sentence.encode('utf8') + '\n')
+
     if args.verbose:
-        print('{} was saved.'.format(filename))
+        print('{} was saved.'.format(pred_file))
+        print('{} was saved.'.format(gold_file))
         print('=' * 89)
 
