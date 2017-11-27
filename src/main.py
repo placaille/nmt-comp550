@@ -29,10 +29,14 @@ parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
+parser.add_argument('--bidirectional', action='store_true',
+                    help='use bidirectional encoder')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
+parser.add_argument('--teacher_force_ratio', type=int, default=0.5,
+                    help='probability of teacher forcing')
 parser.add_argument('--max_length', type=int, default=50, metavar='N',
                     help='maximal sentence length')
 parser.add_argument('--log-interval', type=int, default=20, metavar='N',
@@ -78,7 +82,8 @@ encoder = model.EncoderRNN(args.model,
                            len(corpus.dictionary['src']),
                            args.nhid,
                            args.batch_size,
-                           args.nlayers)
+                           args.nlayers,
+                           bidirectional=args.bidirectional)
 
 if args.use_attention:
     decoder = model.AttentionDecoderRNN(
@@ -130,8 +135,8 @@ def train_epoch():
 
     for n_batch, batch in enumerate(minibatches):
 
-        loss, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim,
-                             True, args.cuda, args.max_length, args.clip)
+        loss, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim, True, 
+                        args.cuda, args.max_length, args.clip, tf_p=args.teacher_force_ratio)
 
         total_loss += loss
 

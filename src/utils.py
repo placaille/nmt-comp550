@@ -1,5 +1,6 @@
 # coding: utf-8
 from __future__ import division
+import numpy as np
 import pdb
 import random
 import time
@@ -63,7 +64,7 @@ def masked_cross_entropy(logits, target, length):
 
 
 def step(encoder, decoder, batch, enc_optim, dec_optim,
-         train=True, cuda=True, max_length=50, clip=0):
+         train=True, cuda=True, max_length=50, clip=0, tf_p=0.):
 
     PAD_token = 0
     SOS_token = 2
@@ -101,6 +102,8 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
         dec_outs = dec_outs.cuda()
         preds = preds.cuda()
 
+    use_teacher_forcing = True if np.random.random() < tf_p else False
+    
     # decode by looping time steps
     for step in xrange(max_tgt):
         if decoder.use_attention:
@@ -110,7 +113,10 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
 
         # get highest scoring token and value
         top_val, top_tok = dec_out.data.topk(1, dim=1)
-        dec_input = Variable(top_tok)
+        if use_teacher_forcing:
+            dec_input = batch_tgt[step].unsqueeze(-1) 
+        else:
+            dec_input = Variable(top_tok)
 
         # store all steps for later loss computing
         dec_outs[step] = dec_out
