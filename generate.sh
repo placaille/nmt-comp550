@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 data_dir=./data/multi30k
 out_dir=./out
-python_script=./src/main.py
+python_script=./src/generate.py
 
 if [ -z "$1" ]; then
 	run_name="temp_run"
@@ -12,7 +12,7 @@ fi
 path_to_model=$out_dir/$run_name/bin
 
 mkdir -p $out_dir/$run_name/preds
-string="$(date) - Running on $(hostname) - $run_name"
+string="$(date) - Generating text on $(hostname) - $run_name"
 
 echo $string
 echo $string >> logs

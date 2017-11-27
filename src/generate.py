@@ -21,20 +21,21 @@ parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--max_length', type=int, default=50, metavar='N',
                     help='maximal sentence length')
+parser.add_argument('--log-interval', type=int, default=20, metavar='N',
+                    help='report interval')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
+parser.add_argument('--use-attention', action='store_true',
+                    help='use attention mechanism in the decoder')
 parser.add_argument('--verbose', action='store_true',
                     help='verbose flag')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
-torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     if not args.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
-    else:
-        torch.cuda.manual_seed(args.seed)
 
 ###############################################################################
 # Load data
@@ -52,7 +53,7 @@ if args.verbose:
     print('Loading model from {}..'.format(args.path_to_model))
 
 # Load the best saved model.
-assert os.path.exists(os.path.join(args.path_to_model), 'encoder.pt')
+assert os.path.exists(os.path.join(args.path_to_model, 'encoder.pt'))
 
 with open(os.path.join(args.path_to_model, 'encoder.pt'), 'rb') as f:
     encoder = torch.load(f)
@@ -72,7 +73,7 @@ if args.verbose:
 ###############################################################################
 
 
-def make_preds(dataset, encoder, decoder, batch_size,
+def make_preds(dataset, encoder, decoder, dictionary, batch_size,
                use_attention, cuda, max_length):
 
     # Turn on evaluation mode which disables dropout.
@@ -88,13 +89,16 @@ def make_preds(dataset, encoder, decoder, batch_size,
     minibatches = utils.minibatch_generator(batch_size, dataset, cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        _, dec_outs = utils.step(encoder, decoder, batch, None, None,
-                                 use_attention, train=False, cuda=cuda,
-                                 max_length=max_length)
+        _, preds = utils.step(encoder, decoder, batch, None, None,
+                              use_attention, train=False, cuda=cuda,
+                              max_length=max_length)
 
-        for i in xrange(dec_outs.size(1)):
-            tokens = [dataset.dictionary['tgt'].idx2word[x] for x in dec_outs[i]]
-            corpus.append(' '.join(tokens))
+        for i in xrange(preds.size(1)):
+            # get tokens from the predicted iindices
+            tokens = [dictionary.idx2word[x] for x in preds[:, i]]
+
+            # filter out all the padding of u'<sos>'
+            corpus.append(' '.join(filter(lambda x: x != u'<sos>', tokens)))
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
             elapsed = time.time() - start_time
@@ -117,11 +121,14 @@ filenames = [os.path.join(out_dir, 'pred_train_{}.txt'.format(args.lang)),
 
 for dataset, filename in zip(datasets, filenames):
 
-    pred_corpus = make_preds(dataset, encoder, decoder, args.batch_size,
-                             args.use_attention, args.cuda, args.max_length)
+    pred_corpus = make_preds(dataset, encoder, decoder,
+                             corpus.dictionary['tgt'],
+                             args.batch_size, args.use_attention,
+                             args.cuda, args.max_length)
 
     with open(filename, 'w') as f:
-        f.write('\n'.join(pred_corpus))
+        for sentence in pred_corpus:
+            f.write(sentence.encode('utf8') + '\n')
 
     if args.verbose:
         print('{} was saved.'.format(filename))

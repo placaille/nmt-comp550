@@ -95,10 +95,12 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, use_attention=False,
 
     # Create variable that will hold all the sequence from decoding
     dec_outs = Variable(torch.zeros(max_tgt, b_size, decoder.output_size))
+    preds = torch.LongTensor(max_tgt, b_size).zero_()
 
     if cuda:
         dec_input = dec_input.cuda()
         dec_outs = dec_outs.cuda()
+        preds = preds.cuda()
 
     # decode by looping time steps
     for step in xrange(max_tgt):
@@ -113,6 +115,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, use_attention=False,
 
         # store all steps for later loss computing
         dec_outs[step] = dec_out
+        preds[step] = top_tok
 
     loss = masked_cross_entropy(dec_outs.transpose(1, 0).contiguous(),
                                 batch_tgt.transpose(1, 0).contiguous(),
@@ -127,7 +130,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, use_attention=False,
         enc_optim.step()
         dec_optim.step()
 
-    return loss.data[0], dec_outs
+    return loss.data[0], preds
 
 
 def set_gradient(model, value):
