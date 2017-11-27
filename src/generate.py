@@ -88,15 +88,15 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     minibatches = utils.minibatch_generator(batch_size, dataset, cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        _, preds = utils.step(encoder, decoder, batch, None, None, train=False,
+        _, pred = utils.step(encoder, decoder, batch, None, None, train=False,
                               cuda=cuda, max_length=max_length)
 
         # true target
         gold = batch[1].data
 
-        for i in xrange(preds.size(1)):
+        for i in xrange(pred.size(1)):
             # get tokens from the predicted iindices
-            pred_tokens = [dictionary.idx2word[x] for x in preds[:, i]]
+            pred_tokens = [dictionary.idx2word[x] for x in pred[:, i]]
             gold_tokens = [dictionary.idx2word[x] for x in gold[:, i]]
 
             # filter out u'<pad>', u'<eos>'
@@ -118,14 +118,14 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
 if args.verbose:
     print('Making predictions..')
 
-preds_dir = os.path.join(args.path_to_model, '../preds')
+pred_dir = os.path.join(args.path_to_model, '../pred')
 gold_dir = os.path.join(args.path_to_model, '../gold')
 
 datasets = [corpus.train, corpus.valid, corpus.test]
 
-pred_files = [os.path.join(preds_dir, 'pred_train_{}.txt'.format(args.lang)),
-              os.path.join(preds_dir, 'pred_valid_{}.txt'.format(args.lang)),
-              os.path.join(preds_dir, 'pred_test_{}.txt'.format(args.lang))]
+pred_files = [os.path.join(pred_dir, 'pred_train_{}.txt'.format(args.lang)),
+              os.path.join(pred_dir, 'pred_valid_{}.txt'.format(args.lang)),
+              os.path.join(pred_dir, 'pred_test_{}.txt'.format(args.lang))]
 
 gold_files = [os.path.join(gold_dir, 'gold_train_{}.txt'.format(args.lang)),
               os.path.join(gold_dir, 'gold_valid_{}.txt'.format(args.lang)),
