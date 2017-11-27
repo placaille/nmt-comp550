@@ -38,3 +38,6 @@ embedding of the same dimensions as the hidden state.
 One of the first if not the first seq2seq learning, they talk about the
 necessity of doing beam search. See *Decoding and Rescoring* [link to
 paper](https://arxiv.org/pdf/1409.3215v1.pdf%3B)
+
+Other paper about beam search strategies [link to
+paper](https://arxiv.org/pdf/1702.01806.pdf)
