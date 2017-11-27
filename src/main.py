@@ -50,7 +50,7 @@ args = parser.parse_args()
 
 # save args
 with open(os.path.join(args.save, '../args.info'), 'w') as f:
-    f.write(args)
+    f.write(str(args))
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)

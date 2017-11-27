@@ -26,8 +26,6 @@ parser.add_argument('--log-interval', type=int, default=20, metavar='N',
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
-parser.add_argument('--use-attention', action='store_true',
-                    help='use attention mechanism in the decoder')
 parser.add_argument('--verbose', action='store_true',
                     help='verbose flag')
 args = parser.parse_args()
