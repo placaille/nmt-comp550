@@ -6,14 +6,12 @@ import argparse
 import time
 import numpy as np
 import torch
-import torch.nn as nn
-from torch.autograd import Variable
 
 import utils  # custom file with lors of functions used
 import data
 import model
 
-parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
+parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='LSTM',

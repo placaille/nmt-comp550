@@ -4,15 +4,12 @@ import os
 import pdb
 import argparse
 import time
-import numpy as np
 import torch
-import torch.nn as nn
-from torch.autograd import Variable
 
 import utils  # custom file with lors of functions used
 import data
 
-parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
+parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
 parser.add_argument('--path_to_model', type=str,
@@ -20,14 +17,10 @@ parser.add_argument('--path_to_model', type=str,
                     help='type of recurrent net (LSTM, GRU)')
 parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
-parser.add_argument('--seed', type=int, default=1111,
-                    help='random seed')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--max_length', type=int, default=50, metavar='N',
                     help='maximal sentence length')
-parser.add_argument('--save', type=str,  default='model.pt',
-                    help='path to save the final model')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
