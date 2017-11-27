@@ -81,6 +81,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
         batch_tgt.unsqueeze(1)
 
     loss = 0
+    use_teacher_forcing = False
 
     if train:
         enc_optim.zero_grad()
