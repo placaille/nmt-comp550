@@ -33,9 +33,9 @@ class EncoderRNN(nn.Module):
         output, output_lengths = pad_packed_sequence(output)
         return output, hidden
 
-    def init_hidden(self):
+    def init_hidden(self, batch_size):
         weight = next(self.parameters()).data
-        n, b, e = self.n_layers, self.batch_size, self.hidden_size
+        n, b, e = self.n_layers, batch_size, self.hidden_size
         if self.rnn_type == 'LSTM':
             return (Variable(weight.new(n, b, e).zero_()),
                     Variable(weight.new(n, b, e).zero_()))

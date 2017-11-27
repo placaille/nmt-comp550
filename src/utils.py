@@ -86,7 +86,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim, use_attention=False,
         enc_optim.zero_grad()
         dec_optim.zero_grad()
 
-    enc_h0 = encoder.init_hidden()
+    enc_h0 = encoder.init_hidden(b_size)
 
     # run src sentence in encoder and get final state
     enc_out, enc_hid = encoder(batch_src, enc_h0, len_src)
