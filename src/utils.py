@@ -62,8 +62,8 @@ def masked_cross_entropy(logits, target, length):
     return loss
 
 
-def step(encoder, decoder, batch, enc_optim, dec_optim, criterion,
-         use_attention=False, train=True, cuda=True, max_length=50, clip=0):
+def step(encoder, decoder, batch, enc_optim, dec_optim, use_attention=False,
+         train=True, cuda=True, max_length=50, clip=0):
 
     PAD_token = 2
     SOS_token = 1
@@ -196,7 +196,8 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
 
-def evaluate(dataset, encoder, decoder, batch_size, use_attention, cuda, criterion):
+def evaluate(dataset, encoder, decoder, batch_size, use_attention,
+             cuda, max_length):
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
     decoder.eval()
@@ -211,15 +212,12 @@ def evaluate(dataset, encoder, decoder, batch_size, use_attention, cuda, criteri
     minibatches = minibatch_generator(batch_size, dataset, cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        try:
-            loss, _ = step(encoder, decoder, batch, None, None, criterion,
-                           use_attention, train=False, cuda=cuda,
-                           max_length=50)
-        except:
-            loss = 0
+        loss, dec_outs = step(encoder, decoder, batch, None, None,
+                              use_attention, train=False, cuda=cuda,
+                              max_length=max_length)
 
         total_loss += loss
         iters += 1
 
     loss = total_loss / iters
-    return loss
+    return loss, dec_outs

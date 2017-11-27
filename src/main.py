@@ -101,7 +101,6 @@ if args.verbose:
     print(encoder)
     print(decoder)
 
-criterion = nn.NLLLoss()
 lr = args.lr
 enc_optim = torch.optim.Adam(encoder.parameters(), lr)
 dec_optim = torch.optim.Adam(decoder.parameters(), lr)
@@ -130,7 +129,7 @@ def train_epoch():
     for n_batch, batch in enumerate(minibatches):
 
         loss, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim,
-                             criterion, args.use_attention, True, args.cuda,
+                             args.use_attention, True, args.cuda,
                              args.max_length, args.clip)
 
         total_loss += loss
@@ -156,9 +155,9 @@ try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_epoch()
-        val_loss = utils.evaluate(corpus.valid, encoder, decoder,
-                                  args.batch_size, args.use_attention,
-                                  args.cuda, criterion)
+        val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder,
+                                     args.batch_size, args.use_attention,
+                                     args.cuda, args.max_length)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
               'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -186,8 +185,9 @@ with open(os.path.join(args.save, 'decoder.pt'), 'rb') as f:
     decoder = torch.load(f)
 
 # Run on test data.
-test_loss = utils.evaluate(corpus.test, encoder, decoder, args.batch_size,
-                           args.use_attention, args.cuda, criterion)
+test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args.batch_size,
+                              args.use_attention, args.cuda,
+                              args.max_length)
 print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, np.exp(test_loss)))
