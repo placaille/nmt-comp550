@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import functional
 
-from Beam import *  # OpenNMT-py Beam implementation
+from beam_wrapper import *
 
 
 def sequence_mask(sequence_length, max_len=None):
@@ -109,167 +109,15 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
 
     if beam_size:
 
-        # The following is loosely base on OpenNMT-py Translator's
-        # implementation. it was modified to reflect our implementation
-
-        k = beam_size
-
-        # copy all encoding and initial inputs to decoder for beam size
-        if len(dec_hid) == 2:
-            # it's a lstm
-            dec_hid_ = tuple([dec_hid[0].repeat(1, k, 1),
-                              dec_hid[1].repeat(1, k, 1)])
+        if decoder.use_attention:
+            beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
+                                      beam_size, cuda, enc_out)
         else:
-            dec_hid_ = dec_hid.repeat(1, k, 1)
-
-        dec_outs_ = dec_outs.repeat(1, k, 1)
-        preds_ = preds.repeat(1, k, 1)
-
-        if decoder.use_attention:
-            enc_out_ = enc_out.repeat(1, k, 1)
-
-        beam = [Beam(k, 1, cuda) for _ in range(b_size)]
-
-        for step in xrange(max_length):
-
-            # check if <eos> for all beams
-            if all((b.done() for b in beam)):
-                break
-
-            # stack the batch and beams to compute in one take
-            dec_input_ = Variable(torch.stack(
-                [b.getCurrentState() for b in beam]).view(-1))
-
-            if decoder.use_attention:
-                dec_out_, dec_hid_, _ = decoder(dec_input_, dec_hid_,
-                                                enc_out_)
-            else:
-                dec_out_, dec_hid_ = decoder(dec_input_, dec_hid_)
-
-            # compute log_probs for each batch and beam
-            log_p = functional.log_softmax(dec_out_.view(k, b_size, -1), dim=2)
-
-            # advance each beam and set decoder hidden statw
-            new_dec_hid_ = []
-            for j, b in enumerate(beam):
-                b.advance(log_p[:, j])
-                origin_tok = b.getCurrentOrigin().data
-
-                # need to update dec_hidden state
-                if len(dec_hid) == 2:
-                    # it's a lstm
-
-                    # get dims for resize
-                    l, bb, d = dec_hid_[0].size()
-                    # reshape and get the jth element of the batch
-                    hid_0 = dec_hid_[0].view(l, k, bb // k, d)[:,:,j]
-                    hid_1 = dec_hid_[1].view(l, k, bb // k, d)[:,:,j]
-
-                    # select decoder hidden based on origin tokens
-                    hid_0 = hid_0.data.copy_(
-                         hid_0.data.index_select(1, origin_tok))
-
-                    hid_1 = hid_1.data.copy_(
-                         hid_1.data.index_select(1, origin_tok))
-
-                    new_dec_hid_.append([hid_0, hid_1])
-
-                else:
-                    # GRU
-                    # get dims for resize
-                    l, bb, d = dec_hid_.size()
-                    # reshape and get the jth element of the batch
-                    hid_ = dec_hid_.view(l, k, bb // k, d)[:,:,j]
-
-                    # select decoder hidden based on origin tokens
-                    hid_ = hid.data.copy_(
-                         hid.data.index_select(1, origin_tok))
-
-                    new_dec_hid_.append(hid_.unsqueeze(2))
-
-            # after pass over batch, need to remerge the new_dec_hid_
-            pdb.set_trace()
-            if len(new_dec_hid_[0]) == 2:
-                # it's a lstm
-                # we want to stack all batch stat 
-                hid_0s = torch.stack([p[0] for p in new_dec_hid], dim=3) 
-                hid_1s = torch.stack([p[1] for p in new_dec_hid], dim=3) 
-
-            else:
-                # it's a gru
-                hids_ = torch.stack([p for p in new_dec_hid], dim=3) 
-                pass
-
-
-
-                # decstates.update_beam(idx = j, positions = origin,
-                # beam_size)
-
-                # updatebeam:
-                    # for e in self._all:
-                        # a, br, d = e.size()
-                        # sentstate = e.view(a, b_size, br/b_size,d)[:,:,j]
-                        # sentstate.data.copy_(sentstates.data.index_selct(1,o rigin)
-
-                # need to set the hidden states and dec_input
-
-
-        # get all hypothesis with scores to choose the best
-        all_hypoths, all_scores = [], []
-        for b in beam:
-            scores_ks = b.sortFinished(minimum=1)
-            hypoths = []
-
-            for i, (times, r) in enumerate(ks[:1]):
-                hypoth = b.getHyp(times, r)
-                hypoths.append(hypoth)
-
-            all_hypoths.append(hypoths)
-            all_scores.append(scores)
-
-
-        # end of beam-search special
-
-
-
-        # create tensors used for selecting best tokens
-        scores = torch.zeros(k ** 2)
-        step_scores = torch.zeros(max_length, k ** 2)
-        step_tokens = torch.zeros(max_length, k)
-
-        if cuda:
-            scores = scores.cuda()
-            step_scores = step_scores.cuda()
-
-        if decoder.use_attention:
-            enc_out_ = enc_out[:, i].unsqueeze(1).repeat(1, k)
-
-        for step in xrange(max_length):
-            if decoder.use_attention:
-                dec_out_, dec_hid_, _ = decoder(dec_input_, dec_hid_,
-                        enc_out_)
-            else:
-                dec_out_, dec_hid_ = decoder(dec_input_, dec_hid_)
-
-            # we need to pick the top k, keep the info
-            new_log_probs = functional.log_softmax(dec_out_, dim=1)
-            top_val, top_tok = new_log_probs.data.topk(k, dim=1)
-
-            step_scores[step] = top_val.view(-1)
-
-            scores += step_scores[step]
-
-            # now that we have the scores of all new full sentences
-            # get the k best and we use these as the input to next step
-            best_total_scores, best_idx_tok = scores.topk(k)
-
-            beam_token = torch.gather(top_tok.view(-1), 0, best_idx_tok)
-            step_tokens[step] = beam_token
-            dec_input_ = Variable(beam_token)
-
-            pdb.set_trace()
-
-        return 0, preds
+            beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
+                                      beam_size, cuda)
+ 
+        preds = beam_searcher.decode()
+        pdb.set_trace()
 
     else:
         # no beam search, do greedy decode by looping time steps
@@ -279,7 +127,6 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
             else:
                 dec_out, dec_hid = decoder(dec_input, dec_hid)
 
-            pdb.set_trace()
 
             # get highest scoring token and value
             top_val, top_tok = dec_out.data.topk(1, dim=1)
