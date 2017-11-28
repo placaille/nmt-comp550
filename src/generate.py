@@ -132,8 +132,11 @@ if args.verbose:
 pred_dir = os.path.join(args.path_to_model, '../pred')
 gold_dir = os.path.join(args.path_to_model, '../gold')
 
-pred_file = os.path.join(pred_dir, 'pred_{}.txt'.format(os.path.basename(args.data_tgt)))
-gold_file = os.path.join(gold_dir, 'gold_{}.txt'.format(os.path.basename(args.data_src)))
+pred_name = os.path.basename(args.data_src).split('.')[0]
+gold_name = os.path.basename(args.data_tgt).split('.')[0]
+
+pred_file = os.path.join(pred_dir, 'pred_{}_{}.txt'.format(pred_name, args.lang))
+gold_file = os.path.join(gold_dir, 'gold_{}_{}.txt'.format(pred_name, args.lang))
 
 pred_corpus, gold_corpus = make_preds(corpus.gen_dataset, encoder, decoder,
                                       corpus.dictionary['tgt'],

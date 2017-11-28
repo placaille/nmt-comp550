@@ -10,12 +10,12 @@ else
 fi
 
 path_to_model=$out_dir/$run_name/bin
-path_to_src=$data_dir/en-fr/val.en
-path_to_tgt=$data_dir/en-fr/val.fr
+path_to_src=$data_dir/en-fr/test.en
+path_to_tgt=$data_dir/en-fr/test.fr
 
 mkdir -p $out_dir/$run_name/pred
 mkdir -p $out_dir/$run_name/gold
-string="$(date) - Generating valid on $(hostname) - $run_name"
+string="$(date) - Generating test on $(hostname) - $run_name"
 
 echo $string
 echo $string >> logs
@@ -32,9 +32,9 @@ python $python_script \
 
 echo Initiating scoring..
 
-valid_gold_path=$out_dir/$run_name/gold/gold_val_en-fr.txt
-valid_pred_path=$out_dir/$run_name/pred/pred_val_en-fr.txt
+test_gold_path=$out_dir/$run_name/gold/gold_test_en-fr.txt
+test_pred_path=$out_dir/$run_name/pred/pred_test_en-fr.txt
 
-echo Valid BLEU score
-perl multi-bleu.perl $valid_gold_path < $valid_pred_path
+echo Test BLEU score
+perl multi-bleu.perl $test_gold_path < $test_pred_path
 echo completed.
