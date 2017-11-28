@@ -115,11 +115,10 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
         k = beam_size
 
         # copy all encoding and initial inputs to decoder for beam size
-
         if len(dec_hid) == 2:
             # it's a lstm
             dec_hid_ = tuple([dec_hid[0].repeat(1, k, 1),
-                             dec_hid[1].repeat(1, k, 1)])
+                              dec_hid[1].repeat(1, k, 1)])
         else:
             dec_hid_ = dec_hid.repeat(1, k, 1)
 
@@ -150,14 +149,86 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
             # compute log_probs for each batch and beam
             log_p = functional.log_softmax(dec_out_.view(k, b_size, -1), dim=2)
 
-            pdb.set_trace()
-            # avance each beam
+            # advance each beam and set decoder hidden statw
+            new_dec_hid_ = []
             for j, b in enumerate(beam):
                 b.advance(log_p[:, j])
+                origin_tok = b.getCurrentOrigin().data
 
-                dec_states
+                # need to update dec_hidden state
+                if len(dec_hid) == 2:
+                    # it's a lstm
+
+                    # get dims for resize
+                    l, bb, d = dec_hid_[0].size()
+                    # reshape and get the jth element of the batch
+                    hid_0 = dec_hid_[0].view(l, k, bb // k, d)[:,:,j]
+                    hid_1 = dec_hid_[1].view(l, k, bb // k, d)[:,:,j]
+
+                    # select decoder hidden based on origin tokens
+                    hid_0 = hid_0.data.copy_(
+                         hid_0.data.index_select(1, origin_tok))
+
+                    hid_1 = hid_1.data.copy_(
+                         hid_1.data.index_select(1, origin_tok))
+
+                    new_dec_hid_.append([hid_0, hid_1])
+
+                else:
+                    # GRU
+                    # get dims for resize
+                    l, bb, d = dec_hid_.size()
+                    # reshape and get the jth element of the batch
+                    hid_ = dec_hid_.view(l, k, bb // k, d)[:,:,j]
+
+                    # select decoder hidden based on origin tokens
+                    hid_ = hid.data.copy_(
+                         hid.data.index_select(1, origin_tok))
+
+                    new_dec_hid_.append(hid_.unsqueeze(2))
+
+            # after pass over batch, need to remerge the new_dec_hid_
+            pdb.set_trace()
+            if len(new_dec_hid_[0]) == 2:
+                # it's a lstm
+                # we want to stack all batch stat 
+                hid_0s = torch.stack([p[0] for p in new_dec_hid], dim=3) 
+                hid_1s = torch.stack([p[1] for p in new_dec_hid], dim=3) 
+
+            else:
+                # it's a gru
+                hids_ = torch.stack([p for p in new_dec_hid], dim=3) 
+                pass
 
 
+
+                # decstates.update_beam(idx = j, positions = origin,
+                # beam_size)
+
+                # updatebeam:
+                    # for e in self._all:
+                        # a, br, d = e.size()
+                        # sentstate = e.view(a, b_size, br/b_size,d)[:,:,j]
+                        # sentstate.data.copy_(sentstates.data.index_selct(1,o rigin)
+
+                # need to set the hidden states and dec_input
+
+
+        # get all hypothesis with scores to choose the best
+        all_hypoths, all_scores = [], []
+        for b in beam:
+            scores_ks = b.sortFinished(minimum=1)
+            hypoths = []
+
+            for i, (times, r) in enumerate(ks[:1]):
+                hypoth = b.getHyp(times, r)
+                hypoths.append(hypoth)
+
+            all_hypoths.append(hypoths)
+            all_scores.append(scores)
+
+
+        # end of beam-search special
 
 
 
@@ -207,6 +278,8 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
                 dec_out, dec_hid, _ = decoder(dec_input, dec_hid, enc_out)
             else:
                 dec_out, dec_hid = decoder(dec_input, dec_hid)
+
+            pdb.set_trace()
 
             # get highest scoring token and value
             top_val, top_tok = dec_out.data.topk(1, dim=1)
