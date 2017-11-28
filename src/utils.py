@@ -219,8 +219,12 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
     total_loss = 0
     iters = 0
 
+    
     # initialize minibatch generator
     minibatches = minibatch_generator(args.batch_size, dataset, args.cuda)
+    
+    upper_bd = 10 if args.debug else float('inf')
+    
     for n_batch, batch in enumerate(minibatches):
 
         loss, dec_outs, attn = step(encoder, decoder, batch, None, None,
@@ -229,6 +233,9 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
 
         total_loss += loss
         iters += 1
+
+        if n_batch > upper_bd : break
+    
     
     if args.show_attention and args.use_attention: 
         batch_src, batch_tgt, len_src, len_tgt = batch
@@ -236,7 +243,6 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
         src_sentence = [corpus.dictionary['src'].idx2word[x] for x in src.data]
         tgt_sentence = [corpus.dictionary['tgt'].idx2word[x] for x in tgt.data]
         att_sentence = attn[0]
-        
         show_attention(src_sentence, tgt_sentence, att_sentence)
     
     loss = total_loss / iters
@@ -244,7 +250,6 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
 
 
 def show_attention(input_sentence, output_words, attentions):
-    import pdb; pdb.set_trace()
     fig = plt.figure()
     ax = fig.add_subplot(111)
     cax = ax.matshow(attentions.numpy(), cmap='bone')

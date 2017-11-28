@@ -85,31 +85,50 @@ class DecoderRNN(nn.Module):
 class Attention(nn.Module):
     def __init__(self, hidden_size, batch_size):
         super(Attention, self).__init__()
+        self.dense = nn.Linear(hidden_size*2, hidden_size)
 
-        self.attention = nn.Linear(hidden_size*2, hidden_size)
-        self.vector    = nn.Parameter(torch.FloatTensor(hidden_size, 1))
 
-    def forward(self, hidden, hs_encoder):
-        length, bs = hs_encoder.size(0), hs_encoder.size(1)
-        attn = Variable(torch.zeros(bs, length))
+    def forward(self, hidden_state, encoder_outputs):
 
-        if hs_encoder.is_cuda :
-            attn = attn.cuda()
+        # make sure inputs have the same batch size
+        assert hidden_state.size(1) == encoder_outputs.size(1)
+    
+        assert len(hidden_state.size()) == 3 
 
-        # we consider one "word" from the decoder at a time
-        if len(hidden.size()) == 3 : 
-            assert hidden.size(0) == 1 
-            hidden = hidden[0]
+        '''
+        build a batch x len_target x len_source tensor
+        note that len_targer should == 1, as were calculating
+        the attention for 1 "word" at a time
+        '''
+        grid = torch.bmm(hidden_state.transpose(1,0), 
+                         encoder_outputs.permute(1,2,0)) 
 
-        # we iterate over the encoder's states
-        for i in xrange(length):
-            attn_score = torch.cat((hidden, hs_encoder[i]), dim=-1) # bs x 2dim
-            attn_score = self.attention(attn_score) # bs x dim
-            attn_score = torch.mm(attn_score, self.vector) # bs x 1
-            attn[:, i] = attn_score.squeeze()
+        '''
+        to have valid weights / probs, we need that our tensor sums 
+        to 1 over the encoder outpus (dim=1), 
+        '''
+        attn_weights = F.softmax(grid, dim=-1)
 
-        # return F.softmax(attn, dim=1).unsqueeze(1) # bs x 1 x length 
-        return F.softmax(attn).unsqueeze(1)
+        '''
+        once we have the attention weights, apply them to your 
+        context in order to extract the relevant features from it. 
+        This is where the conditional extraction takes place
+        '''
+
+        weighted_context = torch.bmm(attn_weights, 
+                                     encoder_outputs.transpose(1,0))
+
+        '''
+        we merge our (weighted) context with the original input
+        '''
+
+        concat = torch.cat((weighted_context, hidden_state.transpose(1,0)), -1)
+        
+        out = F.tanh(self.dense(concat))
+
+        # b x 1 x dim --> 1 x b x dim
+        return out.transpose(1,0), attn_weights
+
 
 class AttentionDecoderRNN(nn.Module):
     def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
@@ -141,16 +160,14 @@ class AttentionDecoderRNN(nn.Module):
         embedded = self.embedding(input).view(1, input.size(0), -1)
         embedded = self.dropout(embedded)
 
-        output, hidden = self.rnn(embedded, hidden)
+        # use this as input for yout rnn
+        attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs)
+        
+        output = F.relu(attn_weights)
+        output, hidden = self.rnn(output, hidden)
+        out = self.out(output).squeeze()
 
-        attn_weights = self.attn(output, encoder_outputs)
-        context = attn_weights.bmm(encoder_outputs.transpose(0,1))
+        return out, hidden, softmax_over_input
 
-        output = output.squeeze(0)
-        context = context.squeeze(1)
-        concat_input = torch.cat((output, context), 1)
-        concat_output = F.tanh(self.concat(concat_input))
 
-        out = self.out(concat_output)
 
-        return out, hidden, attn_weights
