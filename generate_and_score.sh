@@ -24,7 +24,8 @@ python $python_script \
 	--path_to_model $path_to_model \
 	--lang en-fr \
 	--verbose \
-	--batch_size 100
+	--batch_size 2 \
+	--beam_size 5
 
 echo Initiating scoring..
 

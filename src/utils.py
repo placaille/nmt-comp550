@@ -9,6 +9,8 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import functional
 
+from Beam import *  # OpenNMT-py Beam implementation
+
 
 def sequence_mask(sequence_length, max_len=None):
     if max_len is None:
@@ -64,7 +66,8 @@ def masked_cross_entropy(logits, target, length):
 
 
 def step(encoder, decoder, batch, enc_optim, dec_optim,
-         train=True, cuda=True, max_length=50, clip=0, tf_p=0.):
+         train=True, cuda=True, max_length=50, clip=0, tf_p=0.,
+         beam_size=5):
 
     PAD_token = 0
     SOS_token = 2
@@ -96,44 +99,138 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     dec_input = Variable(torch.LongTensor([SOS_token] * b_size))
 
     # Create variable that will hold all the sequence from decoding
-    dec_outs = Variable(torch.zeros(max_tgt, b_size, decoder.output_size))
-    preds = torch.LongTensor(max_tgt, b_size).zero_()
+    dec_outs = Variable(torch.zeros(max_length, b_size, decoder.output_size))
+    preds = torch.LongTensor(max_length, b_size).zero_()
 
     if cuda:
         dec_input = dec_input.cuda()
         dec_outs = dec_outs.cuda()
         preds = preds.cuda()
 
-    # decode by looping time steps
-    for step in xrange(max_tgt):
+    if beam_size:
+
+        # The following is loosely base on OpenNMT-py Translator's
+        # implementation. it was modified to reflect our implementation
+
+        k = beam_size
+
+        # copy all encoding and initial inputs to decoder for beam size
+
+        if len(dec_hid) == 2:
+            # it's a lstm
+            dec_hid_ = tuple([dec_hid[0].repeat(1, k, 1),
+                             dec_hid[1].repeat(1, k, 1)])
+        else:
+            dec_hid_ = dec_hid.repeat(1, k, 1)
+
+        dec_outs_ = dec_outs.repeat(1, k, 1)
+        preds_ = preds.repeat(1, k, 1)
+
         if decoder.use_attention:
-            dec_out, dec_hid, _ = decoder(dec_input, dec_hid, enc_out)
-        else:
-            dec_out, dec_hid = decoder(dec_input, dec_hid)
+            enc_out_ = enc_out.repeat(1, k, 1)
 
-        # get highest scoring token and value
-        top_val, top_tok = dec_out.data.topk(1, dim=1)
-        if use_teacher_forcing:
-            dec_input = batch_tgt[step].unsqueeze(-1) 
-        else:
-            dec_input = Variable(top_tok)
+        beam = [Beam(k, 1, cuda) for _ in range(b_size)]
 
-        # store all steps for later loss computing
-        dec_outs[step] = dec_out
-        preds[step] = top_tok
+        for step in xrange(max_length):
 
-    loss = masked_cross_entropy(dec_outs.transpose(1, 0).contiguous(),
-                                batch_tgt.transpose(1, 0).contiguous(),
-                                len_tgt)
+            # check if <eos> for all beams
+            if all((b.done() for b in beam)):
+                break
 
-    # update params
-    if train:
-        loss.backward()
-        if clip:
-            nn.utils.clip_grad_norm(encoder.parameters(), clip)
-            nn.utils.clip_grad_norm(decoder.parameters(), clip)
-        enc_optim.step()
-        dec_optim.step()
+            # stack the batch and beams to compute in one take
+            dec_input_ = Variable(torch.stack(
+                [b.getCurrentState() for b in beam]).view(-1))
+
+            if decoder.use_attention:
+                dec_out_, dec_hid_, _ = decoder(dec_input_, dec_hid_,
+                                                enc_out_)
+            else:
+                dec_out_, dec_hid_ = decoder(dec_input_, dec_hid_)
+
+            # compute log_probs for each batch and beam
+            log_p = functional.log_softmax(dec_out_.view(k, b_size, -1), dim=2)
+
+            pdb.set_trace()
+            # avance each beam
+            for j, b in enumerate(beam):
+                b.advance(log_p[:, j])
+
+                dec_states
+
+
+
+
+
+        # create tensors used for selecting best tokens
+        scores = torch.zeros(k ** 2)
+        step_scores = torch.zeros(max_length, k ** 2)
+        step_tokens = torch.zeros(max_length, k)
+
+        if cuda:
+            scores = scores.cuda()
+            step_scores = step_scores.cuda()
+
+        if decoder.use_attention:
+            enc_out_ = enc_out[:, i].unsqueeze(1).repeat(1, k)
+
+        for step in xrange(max_length):
+            if decoder.use_attention:
+                dec_out_, dec_hid_, _ = decoder(dec_input_, dec_hid_,
+                        enc_out_)
+            else:
+                dec_out_, dec_hid_ = decoder(dec_input_, dec_hid_)
+
+            # we need to pick the top k, keep the info
+            new_log_probs = functional.log_softmax(dec_out_, dim=1)
+            top_val, top_tok = new_log_probs.data.topk(k, dim=1)
+
+            step_scores[step] = top_val.view(-1)
+
+            scores += step_scores[step]
+
+            # now that we have the scores of all new full sentences
+            # get the k best and we use these as the input to next step
+            best_total_scores, best_idx_tok = scores.topk(k)
+
+            beam_token = torch.gather(top_tok.view(-1), 0, best_idx_tok)
+            step_tokens[step] = beam_token
+            dec_input_ = Variable(beam_token)
+
+            pdb.set_trace()
+
+        return 0, preds
+
+    else:
+        # no beam search, do greedy decode by looping time steps
+        for step in xrange(max_length):
+            if decoder.use_attention:
+                dec_out, dec_hid, _ = decoder(dec_input, dec_hid, enc_out)
+            else:
+                dec_out, dec_hid = decoder(dec_input, dec_hid)
+
+            # get highest scoring token and value
+            top_val, top_tok = dec_out.data.topk(1, dim=1)
+            if use_teacher_forcing:
+                dec_input = batch_tgt[step].unsqueeze(-1) 
+            else:
+                dec_input = Variable(top_tok)
+
+            # store all steps for later loss computing
+            dec_outs[step] = dec_out
+            preds[step] = top_tok
+
+        loss = masked_cross_entropy(dec_outs.transpose(1, 0).contiguous(),
+                                    batch_tgt.transpose(1, 0).contiguous(),
+                                    len_tgt)
+
+        # update params
+        if train:
+            loss.backward()
+            if clip:
+                nn.utils.clip_grad_norm(encoder.parameters(), clip)
+                nn.utils.clip_grad_norm(decoder.parameters(), clip)
+            enc_optim.step()
+            dec_optim.step()
 
     return loss.data[0], preds
 

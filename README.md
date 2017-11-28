@@ -41,3 +41,6 @@ paper](https://arxiv.org/pdf/1409.3215v1.pdf%3B)
 
 Other paper about beam search strategies [link to
 paper](https://arxiv.org/pdf/1702.01806.pdf)
+
+Beam search implementation from
+[OpenNMT-py](https://github.com/OpenNMT/OpenNMT-py/blob/master/onmt/Beam.py)

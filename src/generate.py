@@ -23,6 +23,8 @@ parser.add_argument('--max_length', type=int, default=50, metavar='N',
                     help='maximal sentence length')
 parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='report interval')
+parser.add_argument('--beam_size', type=int, default=5, metavar='N',
+                    help='width of beam search during generation')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
@@ -89,7 +91,7 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     for n_batch, batch in enumerate(minibatches):
 
         _, pred = utils.step(encoder, decoder, batch, None, None, train=False,
-                              cuda=cuda, max_length=max_length)
+                             cuda=cuda, max_length=max_length, beam_size=5)
 
         # true target
         gold = batch[1].data
