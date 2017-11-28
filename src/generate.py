@@ -5,13 +5,16 @@ import pdb
 import argparse
 import time
 import torch
+import pickle as pkl
 
 import utils  # custom file with lors of functions used
 import data
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data', type=str, default='../data/multi30k',
-                    help='location of the data corpus')
+parser.add_argument('--data_src', type=str,
+                    default='../out/multi30k/en-fr/val.en')
+parser.add_argument('--data_tgt', type=str,
+                    default='../out/multi30k/en-fr/val.fr')
 parser.add_argument('--path_to_model', type=str,
                     default='../out/temp_run/bin',
                     help='type of recurrent net (LSTM, GRU)')
@@ -23,6 +26,8 @@ parser.add_argument('--max_length', type=int, default=50, metavar='N',
                     help='maximal sentence length')
 parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='report interval')
+parser.add_argument('--beam_size', type=int, default=5, metavar='N',
+                    help='width of beam search during generation')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
@@ -41,7 +46,11 @@ if torch.cuda.is_available():
 
 if args.verbose:
     print('Processing data..')
-corpus = data.Corpus(args.data, args.lang)
+
+# load the dictionary for generation
+with open(os.path.join(args.path_to_model, 'vocab.pt'), 'rb') as f:
+    dictionary = pkl.load(f)
+corpus = data.GenerationCorpus(dictionary, args.data_src, args.data_tgt)
 
 ###############################################################################
 # Load the model
@@ -89,7 +98,8 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     for n_batch, batch in enumerate(minibatches):
 
         _, pred = utils.step(encoder, decoder, batch, None, None, train=False,
-                              cuda=cuda, max_length=max_length)
+                             cuda=cuda, max_length=max_length,
+                             beam_size=args.beam_size)
 
         # true target
         gold = batch[1].data
@@ -108,8 +118,9 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
             elapsed = time.time() - start_time
-            print('| {:5d} batches | ms/batch {:5.2f} |'.format(
-                  n_batch, elapsed * 1000 / args.log_interval))
+            print('| {:5d}/{:5d} batches | ms/batch {:5.2f} |'.format(
+                  n_batch, len(dataset[0]) // args.batch_size, 
+                  elapsed * 1000 / args.log_interval))
             start_time = time.time()
 
     return pred_corpus, gold_corpus
@@ -121,33 +132,27 @@ if args.verbose:
 pred_dir = os.path.join(args.path_to_model, '../pred')
 gold_dir = os.path.join(args.path_to_model, '../gold')
 
-datasets = [corpus.train, corpus.valid, corpus.test]
+pred_name = os.path.basename(args.data_src).split('.')[0]
+gold_name = os.path.basename(args.data_tgt).split('.')[0]
 
-pred_files = [os.path.join(pred_dir, 'pred_train_{}.txt'.format(args.lang)),
-              os.path.join(pred_dir, 'pred_valid_{}.txt'.format(args.lang)),
-              os.path.join(pred_dir, 'pred_test_{}.txt'.format(args.lang))]
+pred_file = os.path.join(pred_dir, 'pred_{}_{}.txt'.format(pred_name, args.lang))
+gold_file = os.path.join(gold_dir, 'gold_{}_{}.txt'.format(pred_name, args.lang))
 
-gold_files = [os.path.join(gold_dir, 'gold_train_{}.txt'.format(args.lang)),
-              os.path.join(gold_dir, 'gold_valid_{}.txt'.format(args.lang)),
-              os.path.join(gold_dir, 'gold_test_{}.txt'.format(args.lang))]
+pred_corpus, gold_corpus = make_preds(corpus.gen_dataset, encoder, decoder,
+                                      corpus.dictionary['tgt'],
+                                      args.batch_size, args.cuda,
+                                      args.max_length)
 
-for dataset, pred_file, gold_file in zip(datasets, pred_files, gold_files):
+with open(pred_file, 'w') as f:
+    for sentence in pred_corpus:
+        f.write(sentence.encode('utf8') + '\n')
 
-    pred_corpus, gold_corpus = make_preds(dataset, encoder, decoder,
-                                          corpus.dictionary['tgt'],
-                                          args.batch_size, args.cuda,
-                                          args.max_length)
+with open(gold_file, 'w') as f:
+    for sentence in gold_corpus:
+        f.write(sentence.encode('utf8') + '\n')
 
-    with open(pred_file, 'w') as f:
-        for sentence in pred_corpus:
-            f.write(sentence.encode('utf8') + '\n')
-
-    with open(gold_file, 'w') as f:
-        for sentence in gold_corpus:
-            f.write(sentence.encode('utf8') + '\n')
-
-    if args.verbose:
-        print('{} was saved.'.format(pred_file))
-        print('{} was saved.'.format(gold_file))
-        print('=' * 89)
+if args.verbose:
+    print('{} was saved.'.format(pred_file))
+    print('{} was saved.'.format(gold_file))
+    print('=' * 89)
 

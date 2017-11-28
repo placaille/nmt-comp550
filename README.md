@@ -41,3 +41,9 @@ paper](https://arxiv.org/pdf/1409.3215v1.pdf%3B)
 
 Other paper about beam search strategies [link to
 paper](https://arxiv.org/pdf/1702.01806.pdf)
+
+Beam search implementation from [this repo](
+https://github.com/GuessWhatGame/guesswhat/blob/master/src/guesswhat/models/qgen/qgen_beamsearch_wrapper.py)
+
+Highly inspired but was modified to fit our needs and model
+
