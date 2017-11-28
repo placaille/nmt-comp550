@@ -110,10 +110,10 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     if beam_size:
 
         if decoder.use_attention:
-            beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
+            beam_searcher = BSWrapper(decoder, dec_hid.contiguous(), b_size, max_length,
                                       beam_size, cuda, enc_out)
         else:
-            beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
+            beam_searcher = BSWrapper(decoder, dec_hid.contiguous(), b_size, max_length,
                                       beam_size, cuda)
  
         preds = torch.LongTensor(beam_searcher.decode())
