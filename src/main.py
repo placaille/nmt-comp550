@@ -28,7 +28,7 @@ parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=20, metavar='N',
+parser.add_argument('--batch_size', type=int, default=100, metavar='N',
                     help='batch size')
 parser.add_argument('--bidirectional', action='store_true',
                     help='use bidirectional encoder')
@@ -38,14 +38,18 @@ parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--teacher_force_ratio', type=int, default=0.5,
                     help='probability of teacher forcing')
+parser.add_argument('--show_attention', action='store_true',
+                    help='show attention grid after evaluate()')
 parser.add_argument('--max_length', type=int, default=50, metavar='N',
                     help='maximal sentence length')
-parser.add_argument('--log-interval', type=int, default=20, metavar='N',
+parser.add_argument('--log-interval', type=int, default=2, metavar='N',
                     help='report interval')
-parser.add_argument('--use-attention', action='store_true',
+parser.add_argument('--use_attention', action='store_true',
                     help='use attention mechanism in the decoder')
 parser.add_argument('--save', type=str,  default='model.pt',
                     help='path to save the final model')
+parser.add_argument('--debug', action='store_true',
+                    help='reduce training set size to debug')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
@@ -95,8 +99,8 @@ if args.use_attention:
                            args.model,
                            args.nhid,
                            len(corpus.dictionary['tgt']),
-                           args.batch_size, 
-                           args.nlayers)
+                           args.batch_size,
+                           n_layers=args.nlayers)
 else:
     decoder = model.DecoderRNN(
                            args.model,
@@ -138,9 +142,10 @@ def train_epoch():
                                             corpus.train,
                                             args.cuda)
 
+    upper_bd = 10 if args.debug else float('inf')
     for n_batch, batch in enumerate(minibatches):
 
-        loss, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim, True, 
+        loss, _, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim, True, 
                         args.cuda, args.max_length, args.clip, tf_p=args.teacher_force_ratio)
 
         total_loss += loss
@@ -155,6 +160,8 @@ def train_epoch():
             total_loss = 0
             start_time = time.time()
 
+        if n_batch > upper_bd : break
+
 
 if args.verbose:
     print('Starting training..')
@@ -166,9 +173,7 @@ try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_epoch()
-        val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder,
-                                     args.batch_size, args.cuda,
-                                     args.max_length)
+        val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder,args, corpus=corpus)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
               'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -197,8 +202,7 @@ with open(os.path.join(args.save, 'decoder.pt'), 'rb') as f:
     decoder = torch.load(f)
 
 # Run on test data.
-test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args.batch_size,
-                              args.cuda, args.max_length)
+test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
 print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, np.exp(test_loss)))
