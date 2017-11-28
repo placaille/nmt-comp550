@@ -112,7 +112,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     # decode by looping time steps
     for step in xrange(max_tgt):
         if decoder.use_attention:
-            dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out, len_src)
+            dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out)
             decoder_attentions[:, :attn_weights.size(2), step] += attn_weights.squeeze().cpu().data
         else:
             dec_out, dec_hid = decoder(dec_input, dec_hid)

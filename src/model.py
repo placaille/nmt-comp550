@@ -88,7 +88,7 @@ class Attention(nn.Module):
         self.dense = nn.Linear(hidden_size*2, hidden_size)
 
 
-    def forward(self, hidden_state, encoder_outputs, len_src):
+    def forward(self, hidden_state, encoder_outputs):
 
         # make sure inputs have the same batch size
         assert hidden_state.size(1) == encoder_outputs.size(1)
@@ -161,13 +161,13 @@ class AttentionDecoderRNN(nn.Module):
             self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
 
 
-    def forward(self, input, hidden, encoder_outputs, len_src):
+    def forward(self, input, hidden, encoder_outputs):
 
         embedded = self.embedding(input).view(1, input.size(0), -1)
         embedded = self.dropout(embedded)
 
         # use this as input for yout rnn
-        attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs, len_src)
+        attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs)
         
         output = F.relu(attn_weights)
         output, hidden = self.rnn(output, hidden)
