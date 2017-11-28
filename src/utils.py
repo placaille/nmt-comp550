@@ -67,7 +67,7 @@ def masked_cross_entropy(logits, target, length):
 
 def step(encoder, decoder, batch, enc_optim, dec_optim,
          train=True, cuda=True, max_length=50, clip=0, tf_p=0.,
-         beam_size=5):
+         beam_size=0):
 
     PAD_token = 0
     SOS_token = 2
@@ -116,8 +116,9 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
             beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
                                       beam_size, cuda)
  
-        preds = beam_searcher.decode()
-        pdb.set_trace()
+        preds = torch.LongTensor(beam_searcher.decode())
+
+        return 0, preds
 
     else:
         # no beam search, do greedy decode by looping time steps

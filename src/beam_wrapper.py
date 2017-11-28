@@ -78,23 +78,19 @@ class BSWrapper(object):
             # Execute beam search
             new_beam = self.eval_one_beam_search(one_beam)
 
-            pdb.set_trace()
             # Store current beam (with RNN state)
             self.beam[i] = new_beam
 
-        pdb.set_trace()
-        # PAS ENCORE RENDU LA
-
         # Compute output
-        questions =  [b.path[0] for b in self.beam]
-        seq_length = [len(q) for q in questions]
+        tokens =  [b.path[0] for b in self.beam]
+        seq_length = [len(q) for q in tokens]
 
-        padded_questions = np.full((len(self.beam), max(seq_length)),
+        tokens_pad = np.full((len(self.beam), max(seq_length)),
                 fill_value=self.PAD_token)
-        for i, (q, l) in enumerate(zip(questions, seq_length)):
-            padded_questions[i, :l] = q
+        for i, (q, l) in enumerate(zip(tokens, seq_length)):
+            tokens_pad[i, :l] = q
 
-        return padded_questions, questions, seq_length
+        return tokens_pad.transpose()
 
 
     def eval_one_beam_search(self, initial_beam, keep_trajectory=False):
