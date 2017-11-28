@@ -6,6 +6,8 @@ import random
 import time
 import torch
 import torch.nn as nn
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from torch.autograd import Variable
 from torch.nn import functional
 
@@ -104,10 +106,14 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
         dec_outs = dec_outs.cuda()
         preds = preds.cuda()
 
+    if decoder.use_attention:
+        decoder_attentions = torch.zeros(b_size, max_src, max_tgt)
+
     # decode by looping time steps
     for step in xrange(max_tgt):
         if decoder.use_attention:
-            dec_out, dec_hid, _ = decoder(dec_input, dec_hid, enc_out)
+            dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out)
+            decoder_attentions[:, :attn_weights.size(2), step] += attn_weights.squeeze().cpu().data
         else:
             dec_out, dec_hid = decoder(dec_input, dec_hid)
 
@@ -135,7 +141,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
         enc_optim.step()
         dec_optim.step()
 
-    return loss.data[0], preds
+    return loss.data[0], preds, decoder_attentions
 
 
 def set_gradient(model, value):
@@ -202,7 +208,7 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
 
-def evaluate(dataset, encoder, decoder, batch_size, cuda, max_length):
+def evaluate(dataset, encoder, decoder, args, corpus=None):
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
     decoder.eval()
@@ -214,15 +220,43 @@ def evaluate(dataset, encoder, decoder, batch_size, cuda, max_length):
     iters = 0
 
     # initialize minibatch generator
-    minibatches = minibatch_generator(batch_size, dataset, cuda)
+    minibatches = minibatch_generator(args.batch_size, dataset, args.cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        loss, dec_outs = step(encoder, decoder, batch, None, None,
-                              train=False, cuda=cuda,
-                              max_length=max_length)
+        loss, dec_outs, attn = step(encoder, decoder, batch, None, None,
+                               train=False, cuda=args.cuda,
+                               max_length=args.max_length)
 
         total_loss += loss
         iters += 1
-
+    
+    if args.show_attention and args.use_attention: 
+        batch_src, batch_tgt, len_src, len_tgt = batch
+        src, tgt = batch_src[:, 0], batch_tgt[:, 0]
+        src_sentence = [corpus.dictionary['src'].idx2word[x] for x in src.data]
+        tgt_sentence = [corpus.dictionary['tgt'].idx2word[x] for x in tgt.data]
+        att_sentence = attn[0]
+        
+        show_attention(src_sentence, tgt_sentence, att_sentence)
+    
     loss = total_loss / iters
     return loss, dec_outs
+
+
+def show_attention(input_sentence, output_words, attentions):
+    import pdb; pdb.set_trace()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    cax = ax.matshow(attentions.numpy(), cmap='bone')
+
+    if type(input_sentence) == type(''):
+        input_sentence = input_sentence.split(' ')
+
+    # set up axes
+    ax.set_xticklabels([''] + input_sentence + ['<EOS>'], rotation=90)
+    ax.set_yticklabels([''] + output_words)
+
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+
+    plt.show()
