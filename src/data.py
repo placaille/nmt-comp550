@@ -3,6 +3,7 @@ import os
 import pdb
 import re
 import torch
+import pickle as pkl
 from torch.autograd import Variable
 
 class Dictionary(object):
@@ -36,17 +37,17 @@ class Corpus(object):
         lang_src, lang_tgt = lang.split('-')
 
         train_src = self.tokenize(os.path.join(path,
-            'train.{}'.format(lang_src)), 'src')
+            'train.{}'.format(lang_src)), 'src', True)
         train_tgt = self.tokenize(os.path.join(path,
-            'train.{}'.format(lang_tgt)), 'tgt')
+            'train.{}'.format(lang_tgt)), 'tgt', True)
         valid_src = self.tokenize(os.path.join(path,
-            'val.{}'.format(lang_src)), 'src')
+            'val.{}'.format(lang_src)), 'src', False)
         valid_tgt = self.tokenize(os.path.join(path,
-            'val.{}'.format(lang_tgt)), 'tgt')
+            'val.{}'.format(lang_tgt)), 'tgt', False)
         test_src = self.tokenize(os.path.join(path,
-            'test.{}'.format(lang_src)), 'src')
+            'test.{}'.format(lang_src)), 'src', False)
         test_tgt = self.tokenize(os.path.join(path,
-            'test.{}'.format(lang_tgt)), 'tgt')
+            'test.{}'.format(lang_tgt)), 'tgt', False)
 
         self.train = (train_src, train_tgt)
         self.valid = (valid_src, valid_tgt)
@@ -56,7 +57,7 @@ class Corpus(object):
         self.n_sent_valid = len(valid_src)
         self.n_sent_test = len(test_src)
 
-    def tokenize(self, path, src_tgt):
+    def tokenize(self, path, src_tgt, train=False):
         """Tokenizes a text file."""
         assert os.path.exists(path)
         # Add words to the dictionary
@@ -69,7 +70,7 @@ class Corpus(object):
                         flags=re.UNICODE) + [u'<eos>']
 
                 # only add words if in training set
-                if 'train' in path:
+                if train:
                     for word in words:
                         self.dictionary[src_tgt].add_word(word)
                     self.dictionary[src_tgt].vocab_set = \
@@ -101,3 +102,15 @@ class Corpus(object):
                 ids.append(idx)
 
         return ids
+
+
+class GenerationCorpus(Corpus):
+    def __init__(self, vocab, src_path, tgt_path):
+
+        self.dictionary = vocab
+
+        src = self.tokenize(src_path, 'src', False)
+        tgt = self.tokenize(tgt_path, 'tgt', False)
+
+        self.gen_dataset = (src, tgt)
+        self.n_sent = len(src)

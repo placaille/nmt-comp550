@@ -6,6 +6,7 @@ import argparse
 import time
 import numpy as np
 import torch
+import pickle as pkl
 
 import utils  # custom file with lors of functions used
 import data
@@ -71,6 +72,10 @@ if torch.cuda.is_available():
 if args.verbose:
     print('Processing data..')
 corpus = data.Corpus(args.data, args.lang)
+
+# save the dictionary for generation
+with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
+    pkl.dump(corpus.dictionary, f)
 
 ###############################################################################
 # Build the model

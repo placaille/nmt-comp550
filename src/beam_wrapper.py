@@ -31,10 +31,10 @@ def unloop_beam_serie(cur_beam):
 def create_initial_beam(decoder_state, i, batch_size=1):
 
     if len(decoder_state) == 2:
-        dec_hid = tuple([decoder_state[0][:, i].unsqueeze(1),
-                         decoder_state[1][:, i].unsqueeze(1)])
+        dec_hid = tuple([decoder_state[0][:, i].unsqueeze(1).contiguous(),
+                         decoder_state[1][:, i].unsqueeze(1).contiguous()])
     else:
-        dec_hid = decoder_state[:, i].unsqueeze(1)
+        dec_hid = decoder_state[:, i].unsqueeze(1).contiguous()
 
     return BeamToken(
         path=[[] for _ in range(batch_size)],

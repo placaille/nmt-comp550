@@ -10,6 +10,8 @@ else
 fi
 
 path_to_model=$out_dir/$run_name/bin
+path_to_src=$data_dir/en-fr/val.en
+path_to_tgt=$data_dir/en-fr/val.fr
 
 mkdir -p $out_dir/$run_name/pred
 mkdir -p $out_dir/$run_name/gold
@@ -20,29 +22,21 @@ echo $string >> logs
 
 python $python_script \
 	--cuda \
-	--data $data_dir \
+	--data_src $path_to_src \
+	--data_tgt $path_to_tgt \
 	--path_to_model $path_to_model \
-	--lang en-fr \
+	--log-interval 5 \
 	--verbose \
-	--batch_size 20 \
+	--batch_size 5 \
 	--beam_size 5
 
 echo Initiating scoring..
 
 multi_bleu_sript=./scoring_scripts/multi-bleu.perl
 
-train_gold_path=$out_dir/$run_name/gold/gold_train_en-fr.txt
 valid_gold_path=$out_dir/$run_name/gold/gold_valid_en-fr.txt
-test_gold_path=$out_dir/$run_name/gold/gold_test_en-fr.txt
-
-train_pred_path=$out_dir/$run_name/pred/pred_train_en-fr.txt
 valid_pred_path=$out_dir/$run_name/pred/pred_valid_en-fr.txt
-test_pred_path=$out_dir/$run_name/pred/pred_test_en-fr.txt
 
-echo Train BLEU score
-perl multi-bleu.perl $train_gold_path < $train_pred_path
 echo Valid BLEU score
 perl multi-bleu.perl $valid_gold_path < $valid_pred_path
-echo Test BLEU score
-perl multi-bleu.perl $test_gold_path < $test_pred_path
 echo completed.
