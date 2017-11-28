@@ -103,8 +103,8 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     dec_input = Variable(torch.LongTensor([SOS_token] * b_size))
 
     # Create variable that will hold all the sequence from decoding
-    dec_outs = Variable(torch.zeros(max_length, b_size, decoder.output_size))
-    preds = torch.LongTensor(max_length, b_size).zero_()
+    dec_outs = Variable(torch.zeros(max_tgt, b_size, decoder.output_size))
+    preds = torch.LongTensor(max_tgt, b_size).zero_()
 
     decoder_attentions = torch.zeros(b_size, max_src, max_tgt)
 
@@ -140,7 +140,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
             # get highest scoring token and value
             top_val, top_tok = dec_out.data.topk(1, dim=1)
             if use_teacher_forcing:
-                dec_input = batch_tgt[step].unsqueeze(-1) 
+                dec_input = batch_tgt[step].unsqueeze(-1)
             else:
                 dec_input = Variable(top_tok)
 
