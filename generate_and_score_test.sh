@@ -27,7 +27,7 @@ python $python_script \
 	--path_to_model $path_to_model \
 	--log-interval 5 \
 	--verbose \
-	--batch_size 5 \
+	--batch_size 20 \
 	--beam_size 5
 
 echo Initiating scoring..
