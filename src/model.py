@@ -88,12 +88,13 @@ class Attention(nn.Module):
         self.dense = nn.Linear(hidden_size*2, hidden_size)
 
 
-    def forward(self, hidden_state, encoder_outputs):
+    def forward(self, hidden_state, encoder_outputs, len_src):
 
         # make sure inputs have the same batch size
         assert hidden_state.size(1) == encoder_outputs.size(1)
     
         assert len(hidden_state.size()) == 3 
+
 
         '''
         build a batch x len_target x len_source tensor
@@ -105,9 +106,14 @@ class Attention(nn.Module):
 
         '''
         to have valid weights / probs, we need that our tensor sums 
-        to 1 over the encoder outpus (dim=1), 
+        to 1 over the encoder outpus (dim=1). We need to perform
+        a masked softmax in order to discard the padding
         '''
-        attn_weights = F.softmax(grid, dim=-1)
+        mask = (grid != 0).float().cuda()
+        attn_weights = F.softmax(grid, dim=-1) * mask
+        normalizer = attn_weights.sum(dim=-1).unsqueeze(-1)
+        attn_weights /= normalizer
+
 
         '''
         once we have the attention weights, apply them to your 
@@ -155,13 +161,13 @@ class AttentionDecoderRNN(nn.Module):
             self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
 
 
-    def forward(self, input, hidden, encoder_outputs):
+    def forward(self, input, hidden, encoder_outputs, len_src):
 
         embedded = self.embedding(input).view(1, input.size(0), -1)
         embedded = self.dropout(embedded)
 
         # use this as input for yout rnn
-        attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs)
+        attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs, len_src)
         
         output = F.relu(attn_weights)
         output, hidden = self.rnn(output, hidden)

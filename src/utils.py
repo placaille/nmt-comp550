@@ -112,7 +112,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     # decode by looping time steps
     for step in xrange(max_tgt):
         if decoder.use_attention:
-            dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out)
+            dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out, len_src)
             decoder_attentions[:, :attn_weights.size(2), step] += attn_weights.squeeze().cpu().data
         else:
             dec_out, dec_hid = decoder(dec_input, dec_hid)
@@ -244,7 +244,7 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
         tgt_sentence = [corpus.dictionary['tgt'].idx2word[x] for x in tgt.data]
         att_sentence = attn[0]
         show_attention(src_sentence, tgt_sentence, att_sentence)
-    
+
     loss = total_loss / iters
     return loss, dec_outs
 

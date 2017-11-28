@@ -94,7 +94,7 @@ if args.use_attention:
                            args.nhid,
                            len(corpus.dictionary['tgt']),
                            args.batch_size, 
-                           args.nlayers)
+                           n_layers=args.nlayers)
 else:
     decoder = model.DecoderRNN(
                            args.model,
