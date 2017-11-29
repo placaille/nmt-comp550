@@ -111,7 +111,6 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
         dec_input = dec_input.cuda()
         dec_outs = dec_outs.cuda()
         preds = preds.cuda()
-        decoder_attentions = decoder_attentions.cuda()
 
     # decode by looping time steps
     if beam_size:

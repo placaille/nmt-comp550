@@ -24,6 +24,6 @@ python $python_script \
 	--verbose \
 	--log-interval 20 \
 	--batch_size 100 \
-	--epochs 15 \
-	--lr 0.005
+	--epochs 50 \
+	--lr 0.001
 	# --use_attention
