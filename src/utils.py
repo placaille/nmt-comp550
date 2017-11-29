@@ -97,7 +97,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     enc_h0 = encoder.init_hidden(b_size)
 
     # run src sentence in encoder and get final state
-    enc_out, enc_hid = encoder(batch_src, enc_h0, len_src)
+    enc_out, enc_hid  = encoder(batch_src, enc_h0, len_src)
     dec_hid = enc_hid
     dec_input = Variable(torch.LongTensor([SOS_token] * b_size))
 
@@ -115,12 +115,8 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     # decode by looping time steps
     if beam_size:
 
-        if decoder.use_attention:
-            beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
-                                      beam_size, cuda, enc_out)
-        else:
-            beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
-                                      beam_size, cuda)
+        beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
+                                  beam_size, cuda, enc_out)
 
         preds = torch.LongTensor(beam_searcher.decode())
 
@@ -129,11 +125,11 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     else:
 
         for step in xrange(max_tgt):
+
+            dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out)
+
             if decoder.use_attention:
-                dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out)
                 decoder_attentions[:, :attn_weights.size(2), step] += attn_weights.squeeze().cpu().data
-            else:
-                dec_out, dec_hid = decoder(dec_input, dec_hid)
 
             # get highest scoring token and value
             top_val, top_tok = dec_out.data.topk(1, dim=1)

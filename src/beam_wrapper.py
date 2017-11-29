@@ -16,7 +16,8 @@ from torch.nn import functional
 # great thanks from the following repo for the implementation https://github.com/GuessWhatGame/guesswhat/blob/master/src/guesswhat/models/qgen/qgen_beamsearch_wrapper.py
 
 BeamToken = collections.namedtuple('BeamToken', ['path', 'word_id', 'decoder_state',
-                                                 'score', 'prev_beam'])
+                                                 'score', 'prev_beam',
+                                                 'encoder_out'])
 def unloop_beam_serie(cur_beam):
 
     # Build the full beam sequence by using the chain-list structure
@@ -28,7 +29,7 @@ def unloop_beam_serie(cur_beam):
     return sequence[::-1]  # reverse sequence
 
 
-def create_initial_beam(decoder_state, i, batch_size=1):
+def create_initial_beam(decoder_state, i, enc_out, batch_size=1):
 
     if len(decoder_state) == 2:
         dec_hid = tuple([decoder_state[0][:, i].unsqueeze(1).contiguous(),
@@ -36,10 +37,15 @@ def create_initial_beam(decoder_state, i, batch_size=1):
     else:
         dec_hid = decoder_state[:, i].unsqueeze(1).contiguous()
 
+    if enc_out is not None:
+        # means we are using attention
+        enc_out = enc_out[:, 1].unsqueeze(1).contiguous()
+
     return BeamToken(
         path=[[] for _ in range(batch_size)],
         word_id=[[] for _ in range(batch_size)],
         decoder_state=dec_hid,
+        encoder_out=enc_out,
         score=0,  # initial probability is 1. If we apply the log trick log(1) = 0
         prev_beam=None
     )
@@ -47,7 +53,7 @@ def create_initial_beam(decoder_state, i, batch_size=1):
 
 class BSWrapper(object):
     def __init__(self, decoder, decoder_state, batch_size, max_length,
-                 beam_size, cuda, enc_out=None):
+                 beam_size, cuda, enc_out):
 
         self.decoder = decoder
         self.cuda = cuda
@@ -60,9 +66,12 @@ class BSWrapper(object):
         self.max_length = max_length
         self.batch_size = batch_size
 
-        self.enc_out = enc_out
+        if decoder.use_attention:
+            enc_out = enc_out
+        else:
+            enc_out=None
 
-        self.beam = [create_initial_beam(decoder_state, i)
+        self.beam = [create_initial_beam(decoder_state, i, enc_out)
                      for i in range(batch_size)]
 
     def decode(self):
@@ -110,15 +119,13 @@ class BSWrapper(object):
 
                 dec_input = Variable(torch.LongTensor(beam_token.word_id))
                 dec_hid = beam_token.decoder_state
+                enc_out = beam_token.encoder_out
 
                 if self.cuda:
                     dec_input = dec_input.cuda()
 
                 # evaluate next_step
-                if self.decoder.use_attention:
-                    dec_out, dec_hid, _ = self.decoder(dec_input, dec_hid, self.enc_out)
-                else:
-                    dec_out, dec_hid = self.decoder(dec_input, dec_hid)
+                dec_out, dec_hid, _ = self.decoder(dec_input, dec_hid, enc_out)
 
                 # Reshape tensor (remove 1 size batch)
                 log_p = functional.log_softmax(dec_out, 1)
@@ -132,6 +139,7 @@ class BSWrapper(object):
                             path=[beam_token.path[0] + [word_id]],
                             word_id=[[word_id]],
                             decoder_state=dec_hid,
+                            encoder_out=enc_out,
                             score=beam_token.score + log_p_np[word_id],  # log trick
                             prev_beam=beam_token if keep_trajectory else None  # Keep trace of the previous beam if we want to keep the trajectory
                         ))

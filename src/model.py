@@ -89,13 +89,13 @@ class DecoderRNN(nn.Module):
         self.out = nn.Linear(hidden_size, output_size)
         # self.softmax = nn.LogSoftmax(dim=1)  # done in masked_cross_ent
 
-    def forward(self, input, hidden):
+    def forward(self, input, hidden, encoder_outputs=None):
         output = self.embedding(input).view(1, input.size(0), -1)
         for i in xrange(self.n_layers):
             output = F.relu(output)
             output, hidden = self.rnn(output, hidden)
         output = self.out(output.view(input.size(0), -1))
-        return output, hidden
+        return output, hidden, None
 
     def init_hidden(self):
         # TODO fix changing batch size at end of epoch
@@ -136,8 +136,8 @@ class Attention(nn.Module):
         a masked softmax in order to discard the padding
         '''
         mask = (grid != 0).float().cuda()
-        attn_weights = F.softmax(grid, dim=-1) * mask
-        normalizer = attn_weights.sum(dim=-1).unsqueeze(-1)
+        attn_weights = F.softmax(grid, dim=2) * mask
+        normalizer = attn_weights.sum(dim=2).unsqueeze(2)
         attn_weights /= normalizer
 
 
@@ -155,7 +155,7 @@ class Attention(nn.Module):
         '''
 
         concat = torch.cat((weighted_context, hidden_state.transpose(1,0)), -1)
-        
+
         out = F.tanh(self.dense(concat))
 
         # b x 1 x dim --> 1 x b x dim
@@ -194,10 +194,10 @@ class AttentionDecoderRNN(nn.Module):
 
         # use this as input for yout rnn
         attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs)
-        
+ 
         output = F.relu(attn_weights)
         output, hidden = self.rnn(output, hidden)
-        out = self.out(output).squeeze()
+        out = self.out(output).squeeze(0)
 
         return out, hidden, softmax_over_input
 
