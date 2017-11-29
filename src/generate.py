@@ -9,6 +9,7 @@ import pickle as pkl
 
 import utils  # custom file with lors of functions used
 import data
+import model
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_src', type=str,
@@ -52,6 +53,10 @@ with open(os.path.join(args.path_to_model, 'vocab.pt'), 'rb') as f:
     dictionary = pkl.load(f)
 corpus = data.GenerationCorpus(dictionary, args.data_src, args.data_tgt)
 
+# load training run args
+with open(os.path.join(args.path_to_model, '../args.info'), 'rb') as f:
+    train_args = pkl.load(f)
+
 ###############################################################################
 # Load the model
 ###############################################################################
@@ -59,13 +64,19 @@ corpus = data.GenerationCorpus(dictionary, args.data_src, args.data_tgt)
 if args.verbose:
     print('Loading model from {}..'.format(args.path_to_model))
 
-# Load the best saved model.
-assert os.path.exists(os.path.join(args.path_to_model, 'encoder.pt'))
+assert os.path.exists(os.path.join(args.path_to_model, 'encoder_params.pt'))
+assert os.path.exists(os.path.join(args.path_to_model, 'decoder_params.pt'))
 
-with open(os.path.join(args.path_to_model, 'encoder.pt'), 'rb') as f:
-    encoder = torch.load(f)
-with open(os.path.join(args.path_to_model, 'decoder.pt'), 'rb') as f:
-    decoder = torch.load(f)
+# create new model of same specs as training
+encoder, decoder = model.build_model(len(corpus.dictionary['src']),
+                                     len(corpus.dictionary['tgt']),
+                                     args=train_args)
+
+# Load the best saved model.
+with open(os.path.join(args.path_to_model, 'encoder_params.pt'), 'rb') as f:
+    encoder.load_state_dict(torch.load(f))
+with open(os.path.join(args.path_to_model, 'decoder_params.pt'), 'rb') as f:
+    decoder.load_state_dict(torch.load(f))
 
 if args.cuda:
     encoder.cuda()
