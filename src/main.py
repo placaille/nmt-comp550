@@ -36,7 +36,7 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
-parser.add_argument('--teacher_force_prob', type=int, default=0.5,
+parser.add_argument('--teacher_force_prob', type=float, default=0.5,
                     help='probability of teacher forcing')
 parser.add_argument('--show_attention', action='store_true',
                     help='show attention grid after evaluate()')
