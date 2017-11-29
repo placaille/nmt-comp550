@@ -6,6 +6,32 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
 from torch.autograd import Variable
 
+
+def build_model(src_vocab_size, tgt_vocab_size, args):
+
+    encoder = EncoderRNN(args.model,
+                         src_vocab_size,
+                         args.nhid,
+                         args.batch_size,
+                         args.nlayers,
+                         bidirectional=args.bidirectional)
+
+    if args.use_attention:
+        decoder = AttentionDecoderRNN(args.model,
+                                      args.nhid,
+                                      tgt_vocab_size,
+                                      args.batch_size,
+                                      n_layers=args.nlayers)
+    else:
+        decoder = DecoderRNN(args.model,
+                             args.nhid,
+                             tgt_vocab_size,
+                             args.batch_size,
+                             args.nlayers)
+
+    return encoder, decoder
+
+
 class EncoderRNN(nn.Module):
     def __init__(self, rnn_type, input_size, hidden_size, batch_size,
                  n_layers=2, bidirectional=False):

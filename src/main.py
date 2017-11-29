@@ -58,8 +58,8 @@ parser.add_argument('--verbose', action='store_true',
 args = parser.parse_args()
 
 # save args
-with open(os.path.join(args.save, '../args.info'), 'w') as f:
-    f.write(str(args))
+with open(os.path.join(args.save, '../args.info'), 'wb') as f:
+    pkl.dump(args, f)
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
@@ -85,29 +85,14 @@ with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
 # Build the model
 ###############################################################################
 
+
 if args.verbose:
     print('Building model..')
-encoder = model.EncoderRNN(args.model,
-                           len(corpus.dictionary['src']),
-                           args.nhid,
-                           args.batch_size,
-                           args.nlayers,
-                           bidirectional=args.bidirectional)
 
-if args.use_attention:
-    decoder = model.AttentionDecoderRNN(
-                           args.model,
-                           args.nhid,
-                           len(corpus.dictionary['tgt']),
-                           args.batch_size,
-                           n_layers=args.nlayers)
-else:
-    decoder = model.DecoderRNN(
-                           args.model,
-                           args.nhid,
-                           len(corpus.dictionary['tgt']),
-                           args.batch_size,
-                           args.nlayers)
+# build model
+encoder, decoder = model.build_model(len(corpus.dictionary['src']),
+                                     len(corpus.dictionary['tgt']),
+                                     args=args)
 
 if args.cuda:
     encoder.cuda()
@@ -181,10 +166,10 @@ try:
         print('-' * 89)
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
-            with open(os.path.join(args.save, 'encoder.pt'), 'wb') as f:
-                torch.save(encoder, f)
-            with open(os.path.join(args.save, 'decoder.pt'), 'wb') as f:
-                torch.save(decoder, f)
+            with open(os.path.join(args.save, 'encoder_params.pt'), 'wb') as f:
+                torch.save(encoder.state_dict(), f)
+            with open(os.path.join(args.save, 'decoder_params.pt'), 'wb') as f:
+                torch.save(decoder.state_dict(), f)
 
             best_val_loss = val_loss
         else:
@@ -195,15 +180,28 @@ except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
 
-# Load the best saved model.
-with open(os.path.join(args.save, 'encoder.pt'), 'rb') as f:
-    encoder = torch.load(f)
-with open(os.path.join(args.save, 'decoder.pt'), 'rb') as f:
-    decoder = torch.load(f)
+
+print('=' * 89)
+if args.verbose:
+    print('Loading best model and evaluating test..')
+
+# create new model of same specs
+encoder, decoder = model.build_model(len(corpus.dictionary['src']),
+                                     len(corpus.dictionary['tgt']),
+                                     args=args)
+
+if args.cuda:
+    encoder.cuda()
+    decoder.cuda()
+
+# Load the best saved model params
+with open(os.path.join(args.save, 'encoder_params.pt'), 'rb') as f:
+    encoder.load_state_dict(torch.load(f))
+with open(os.path.join(args.save, 'decoder_params.pt'), 'rb') as f:
+    decoder.load_state_dict(torch.load(f))
 
 # Run on test data.
 test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
-print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, np.exp(test_loss)))
 print('=' * 89)
