@@ -24,6 +24,7 @@ python $python_script \
 	--verbose \
 	--log-interval 20 \
 	--batch_size 100 \
-	--epochs 50 \
-	--lr 0.001
-	# --use_attention
+	--epochs 20 \
+	--lr 0.001 \
+	--teacher_force_prob 0.0 \
+	--use_attention

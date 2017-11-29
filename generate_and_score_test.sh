@@ -28,7 +28,7 @@ python $python_script \
 	--log-interval 5 \
 	--verbose \
 	--batch_size 20 \
-	--beam_size 5
+	--beam_size 15
 
 echo Initiating scoring..
 
