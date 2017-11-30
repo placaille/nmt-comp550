@@ -96,8 +96,21 @@ def step(encoder, decoder, batch, optimizer,
     enc_h0 = encoder.init_hidden(b_size)
 
     # run src sentence in encoder and get final state
-    enc_out, enc_hid  = encoder(batch_src, enc_h0, len_src)
-    dec_hid = enc_hid
+    enc_out, context = encoder(batch_src, enc_h0, len_src)
+
+    # reshape hidden state if bidirectional
+    if encoder.bidirectional:
+        if encoder.rnn_type == 'LSTM':
+            n2, b, h = context[0].size()
+            dec_hid = tuple([context[0].view(n2 // 2, b, h *2 ).contiguous(),
+                             context[1].view(n2 // 2, b, h * 2).contiguous()])
+        else:
+            n2, b, h = context.size()
+            dec_hid = context.view(n2 // 2, b, h * 2)
+    else:
+        dec_hid = context
+
+    # create SOS tokens for decoder input
     dec_input = Variable(torch.LongTensor([SOS_token] * b_size))
 
     # Create variable that will hold all the sequence from decoding

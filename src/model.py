@@ -16,9 +16,14 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
                          args.nlayers,
                          args.bidirectional)
 
+    if encoder.bidirectional:
+        dec_nhid = args.nhid * 2
+    else:
+        dec_nhid = args.nhid
+
     if args.use_attention:
         decoder = AttentionDecoderRNN(args.model,
-                                      args.nhid,
+                                      dec_nhid,
                                       tgt_vocab_size,
                                       args.batch_size,
                                       args.max_length,
@@ -26,7 +31,7 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
                                       args.dropout)
     else:
         decoder = DecoderRNN(args.model,
-                             args.nhid,
+                             dec_nhid,
                              tgt_vocab_size,
                              args.batch_size,
                              args.nlayers)
@@ -61,10 +66,6 @@ class EncoderRNN(nn.Module):
             output, hidden = self.rnn(output, hidden)
         output, output_lengths = pad_packed_sequence(output)
 
-        # sum of multiple directions if applicable  directions
-        if self.bidirectional:
-            output = output[:, :, self.hidden_size:] + \
-                     output[:, :, :self.hidden_size]
         return output, hidden
 
     def init_hidden(self, batch_size):
@@ -107,16 +108,6 @@ class DecoderRNN(nn.Module):
         output = self.out(output.view(input.size(0), -1))
         return output, hidden, None
 
-    def init_hidden(self):
-        # TODO fix changing batch size at end of epoch
-        weight = next(self.parameters()).data
-        n, b, e = self.n_layers, self.batch_size, self.hidden_size
-        if self.rnn_type == 'LSTM':
-            return (Variable(weight.new(n, b, e).zero_()),
-                    Variable(weight.new(n, b, e).zero_()))
-        else:
-            return Variable(weight.new(n, b, e).zero_())
-
 
 class Attention(nn.Module):
     def __init__(self, hidden_size, batch_size):
@@ -128,7 +119,7 @@ class Attention(nn.Module):
 
         # make sure inputs have the same batch size
         assert hidden_state.size(1) == encoder_outputs.size(1)
-    
+
         assert len(hidden_state.size()) == 3 
 
 
@@ -174,7 +165,7 @@ class Attention(nn.Module):
 
 class AttentionDecoderRNN(nn.Module):
     def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
-                 max_length=50, n_layers=2, dropout_p=0.1):
+                 max_length=50, n_layers=2, dropout_p=0.1, enc_bidir=False):
         super(AttentionDecoderRNN, self).__init__()
 
         self.hidden_size = hidden_size
@@ -184,6 +175,7 @@ class AttentionDecoderRNN(nn.Module):
         self.rnn_type    = rnn_type
         self.dropout_p   = dropout_p
         self.use_attention = True
+        self.enc_bidir = enc_bidir
 
         self.embedding    = nn.Embedding(output_size, hidden_size)
         self.attn         = Attention(hidden_size, batch_size)
