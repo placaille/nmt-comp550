@@ -87,6 +87,9 @@ with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
 # Build the model
 ###############################################################################
 
+def create_optimizer(params, lr):
+    optim = torch.optim.Adam(params, lr)
+    return optim
 
 if args.verbose:
     print('Building model..')
@@ -105,8 +108,8 @@ if args.verbose:
     print(decoder)
 
 lr = args.lr
-enc_optim = torch.optim.Adam(encoder.parameters(), lr)
-dec_optim = torch.optim.Adam(decoder.parameters(), lr)
+enc_optim = create_optimizer(encoder.parameters(), lr)
+dec_optim = create_optimizer(decoder.parameters(), lr)
 
 ###############################################################################
 # Training code
@@ -176,7 +179,9 @@ try:
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            lr /= 4.0
+            lr /= 2.0
+            enc_optim = create_optimizer(encoder.parameters(), lr)
+            dec_optim = create_optimizer(decoder.parameters(), lr)
 
 except KeyboardInterrupt:
     print('-' * 89)
