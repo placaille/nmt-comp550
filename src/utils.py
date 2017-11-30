@@ -251,7 +251,7 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
 
     for n_batch, batch in enumerate(minibatches):
 
-        loss, dec_outs, attn = step(encoder, decoder, batch, None, None,
+        loss, dec_outs, attn = step(encoder, decoder, batch, optimizer=None,
                                     train=False, cuda=args.cuda,
                                     max_length=args.max_length)
 
