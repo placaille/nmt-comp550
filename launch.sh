@@ -26,5 +26,8 @@ python $python_script \
 	--batch_size 100 \
 	--epochs 20 \
 	--lr 0.001 \
-	--teacher_force_prob 0.0 \
+	--bidirectional \
+	--nlayers 1 \
+	--dropout 0.5 \
+	--teacher_force_prob 0.3 \
 	--use_attention

@@ -14,14 +14,16 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
                          args.nhid,
                          args.batch_size,
                          args.nlayers,
-                         bidirectional=args.bidirectional)
+                         args.bidirectional)
 
     if args.use_attention:
         decoder = AttentionDecoderRNN(args.model,
                                       args.nhid,
                                       tgt_vocab_size,
                                       args.batch_size,
-                                      n_layers=args.nlayers)
+                                      args.max_length,
+                                      args.nlayers,
+                                      args.dropout)
     else:
         decoder = DecoderRNN(args.model,
                              args.nhid,

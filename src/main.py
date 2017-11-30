@@ -38,6 +38,8 @@ parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--teacher_force_prob', type=float, default=0.5,
                     help='probability of teacher forcing')
+parser.add_argument('--dropout', type=float, default=0.25,
+                    help='dropout where applicable')
 parser.add_argument('--show_attention', action='store_true',
                     help='show attention grid after evaluate()')
 parser.add_argument('--max_length', type=int, default=50, metavar='N',
