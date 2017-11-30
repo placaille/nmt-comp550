@@ -110,7 +110,7 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     minibatches = utils.minibatch_generator(batch_size, dataset, cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        _, pred = utils.step(encoder, decoder, batch, None, None, train=False,
+        _, pred = utils.step(encoder, decoder, batch, None, train=False,
                              cuda=cuda, max_length=max_length,
                              beam_size=args.beam_size)
 
