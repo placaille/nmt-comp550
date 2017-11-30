@@ -44,6 +44,7 @@ class EncoderRNN(nn.Module):
         self.batch_size = batch_size
         self.n_layers = n_layers
         self.rnn_type = rnn_type
+        self.bidirectional = bidirectional
 
         self.embedding = nn.Embedding(input_size, hidden_size)
         if rnn_type == 'GRU':
@@ -59,11 +60,18 @@ class EncoderRNN(nn.Module):
         for i in xrange(self.n_layers):
             output, hidden = self.rnn(output, hidden)
         output, output_lengths = pad_packed_sequence(output)
+
+        # sum of multiple directions if applicable  directions
+        if self.bidirectional:
+            output = output[:, :, self.hidden_size:] + \
+                     output[:, :, :self.hidden_size]
         return output, hidden
 
     def init_hidden(self, batch_size):
         weight = next(self.parameters()).data
         n, b, e = self.n_layers, batch_size, self.hidden_size
+        if self.bidirectional:
+            n *= 2
         if self.rnn_type == 'LSTM':
             return (Variable(weight.new(n, b, e).zero_()),
                     Variable(weight.new(n, b, e).zero_()))
