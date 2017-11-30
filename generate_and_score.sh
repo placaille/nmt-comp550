@@ -21,7 +21,7 @@ if [ -z $model ]; then
   echo "Missing argument -m"
   usage; exit;
 fi
-if [ -z $model ]; then
+if [ -z $data ]; then
   echo "Missing argument -d"
   usage; exit;
 fi
@@ -49,5 +49,5 @@ python $python_script \
 	--path_to_model $path_to_model \
 	--log-interval 5 \
 	--verbose \
-	--batch_size 100 \
+	--batch_size 50 \
 	--beam_size 15
