@@ -6,6 +6,8 @@ import argparse
 import time
 import torch
 import pickle as pkl
+from nltk.translate.bleu_score import corpus_bleu
+from nltk.translate.bleu_score import SmoothingFunction
 
 import utils  # custom file with lors of functions used
 import data
@@ -101,8 +103,8 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     utils.set_gradient(encoder, False)
     utils.set_gradient(decoder, False)
 
-    pred_corpus = []
-    gold_corpus = []
+    pred_corpus_tokens = []
+    gold_corpus_tokens = []
     start_time = time.time()
 
     minibatches = utils.minibatch_generator(batch_size, dataset, cuda)
@@ -122,10 +124,11 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
 
             # filter out u'<pad>', u'<eos>'
             filter_tokens = [u'<pad>', u'<eos>']
-            pred_corpus.append(' '.join(filter(
-                lambda x: x not in filter_tokens, pred_tokens)))
-            gold_corpus.append(' '.join(filter(
-                lambda x: x not in filter_tokens, gold_tokens)))
+            pred_tokens = filter(lambda x: x not in filter_tokens, pred_tokens)
+            gold_tokens = filter(lambda x: x not in filter_tokens, gold_tokens)
+
+            pred_corpus_tokens.append(pred_tokens)
+            gold_corpus_tokens.append(gold_tokens)
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
             elapsed = time.time() - start_time
@@ -134,7 +137,7 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
                   elapsed * 1000 / args.log_interval))
             start_time = time.time()
 
-    return pred_corpus, gold_corpus
+    return pred_corpus_tokens, gold_corpus_tokens
 
 
 if args.verbose:
@@ -149,21 +152,32 @@ gold_name = os.path.basename(args.data_tgt).split('.')[0]
 pred_file = os.path.join(pred_dir, 'pred_{}_{}.txt'.format(pred_name, args.lang))
 gold_file = os.path.join(gold_dir, 'gold_{}_{}.txt'.format(gold_name, args.lang))
 
-pred_corpus, gold_corpus = make_preds(corpus.gen_dataset, encoder, decoder,
+pred_tokens, gold_tokens = make_preds(corpus.gen_dataset, encoder, decoder,
                                       corpus.dictionary['tgt'],
                                       args.batch_size, args.cuda,
                                       args.max_length)
 
 with open(pred_file, 'w') as f:
-    for sentence in pred_corpus:
-        f.write(sentence.encode('utf8') + '\n')
+    for tokens in pred_tokens:
+        f.write(' '.join(tokens).encode('utf8') + '\n')
 
 with open(gold_file, 'w') as f:
-    for sentence in gold_corpus:
-        f.write(sentence.encode('utf8') + '\n')
+    for tokens in gold_tokens:
+        f.write(' '.join(tokens).encode('utf8') + '\n')
+
+print('{} was saved.'.format(pred_file))
+print('{} was saved.'.format(gold_file))
+print('=' * 89)
 
 if args.verbose:
-    print('{} was saved.'.format(pred_file))
-    print('{} was saved.'.format(gold_file))
-    print('=' * 89)
+    print('Scoring predictions..')
 
+# Scoring the dataset using nltk's bleu_score
+s_func = SmoothingFunction()
+bleu_score = corpus_bleu(gold_tokens, pred_tokens,
+                         smoothing_function=s_func.method3)
+
+print('BLEU score:\t{:5.4f}'.format(bleu_score * 100))
+with open(os.path.join(args.path_to_model, '../bleu_score.info'), 'w') as f:
+    f.write('BLEU score:\t{:5.4f}'.format(bleu_score * 100))
+print('=' * 89)
