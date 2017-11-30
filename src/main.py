@@ -105,7 +105,9 @@ if args.verbose:
 
 
 lr = args.lr
-optimizer = torch.optim.Adam([encoder.parameters(), decoder.parameters()], lr)
+optimizer = torch.optim.Adam(list(encoder.parameters()) + \
+                             list(decoder.parameters()),
+                             lr)
 
 # scheduler to reduce the lr by 4 (*0.25) if val loss doesn't decr for 2 epoch
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -165,6 +167,7 @@ try:
         epoch_start_time = time.time()
         train_epoch()
         val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder,args, corpus=corpus)
+        scheduler.step(val_loss)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
               'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -179,8 +182,7 @@ try:
 
             best_val_loss = val_loss
         else:
-            # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            scheduler.step(val_loss)
+            # just for illustration purposes, doesn't change nothing
             lr *= 0.25
 
 except KeyboardInterrupt:
