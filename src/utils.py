@@ -106,7 +106,7 @@ def step(encoder, decoder, batch, optimizer,
                              context[1].view(n2 // 2, b, h * 2).contiguous()])
         else:
             n2, b, h = context.size()
-            dec_hid = context.view(n2 // 2, b, h * 2)
+            dec_hid = context.view(n2 // 2, b, h * 2).contiguous()
     else:
         dec_hid = context
 

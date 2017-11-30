@@ -122,21 +122,22 @@ class Attention(nn.Module):
 
         assert len(hidden_state.size()) == 3 
 
+        hidden_state = hidden_state.transpose(1, 0).contiguous()
 
         '''
         build a batch x len_target x len_source tensor
         note that len_targer should == 1, as were calculating
         the attention for 1 "word" at a time
         '''
-        grid = torch.bmm(hidden_state.transpose(1,0), 
-                         encoder_outputs.permute(1,2,0)) 
+        grid = torch.bmm(hidden_state, 
+                         encoder_outputs.permute(1,2,0).contiguous())
 
         '''
         to have valid weights / probs, we need that our tensor sums 
         to 1 over the encoder outpus (dim=1). We need to perform
         a masked softmax in order to discard the padding
         '''
-        mask = (grid != 0).float().cuda()
+        mask = (grid != 0).float()
         attn_weights = F.softmax(grid, dim=2) * mask
         normalizer = attn_weights.sum(dim=2).unsqueeze(2)
         attn_weights /= normalizer
@@ -149,18 +150,18 @@ class Attention(nn.Module):
         '''
 
         weighted_context = torch.bmm(attn_weights, 
-                                     encoder_outputs.transpose(1,0))
+                                     encoder_outputs.transpose(1,0).contiguous())
 
         '''
         we merge our (weighted) context with the original input
         '''
 
-        concat = torch.cat((weighted_context, hidden_state.transpose(1,0)), -1)
+        concat = torch.cat((weighted_context, hidden_state), -1)
 
         out = F.tanh(self.dense(concat))
 
         # b x 1 x dim --> 1 x b x dim
-        return out.transpose(1,0), attn_weights
+        return out.transpose(1,0).contiguous(), attn_weights
 
 
 class AttentionDecoderRNN(nn.Module):
