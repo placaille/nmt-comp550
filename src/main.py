@@ -87,10 +87,6 @@ with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
 # Build the model
 ###############################################################################
 
-def create_optimizer(params, lr):
-    optim = torch.optim.Adam(params, lr)
-    return optim
-
 if args.verbose:
     print('Building model..')
 
@@ -107,9 +103,14 @@ if args.verbose:
     print(encoder)
     print(decoder)
 
+
 lr = args.lr
-enc_optim = create_optimizer(encoder.parameters(), lr)
-dec_optim = create_optimizer(decoder.parameters(), lr)
+optimizer = torch.optim.Adam([encoder.parameters(), decoder.parameters()], lr)
+
+# scheduler to reduce the lr by 4 (*0.25) if val loss doesn't decr for 2 epoch
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                       factor=0.25,
+                                                       verbose=True)
 
 ###############################################################################
 # Training code
@@ -135,7 +136,7 @@ def train_epoch():
     upper_bd = 10 if args.debug else float('inf')
     for n_batch, batch in enumerate(minibatches):
 
-        loss, _, _ = utils.step(encoder, decoder, batch, enc_optim, dec_optim, True, 
+        loss, _, _ = utils.step(encoder, decoder, batch, optimizer, True, 
                         args.cuda, args.max_length, args.clip, tf_p=args.teacher_force_prob)
 
         total_loss += loss
@@ -179,9 +180,8 @@ try:
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            lr /= 2.0
-            enc_optim = create_optimizer(encoder.parameters(), lr)
-            dec_optim = create_optimizer(decoder.parameters(), lr)
+            scheduler.step(val_loss)
+            lr *= 0.25
 
 except KeyboardInterrupt:
     print('-' * 89)

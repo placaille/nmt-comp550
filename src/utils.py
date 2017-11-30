@@ -68,7 +68,7 @@ def masked_cross_entropy(logits, target, length):
     return loss
 
 
-def step(encoder, decoder, batch, enc_optim, dec_optim,
+def step(encoder, decoder, batch, optimizer,
          train=True, cuda=True, max_length=50, clip=0, tf_p=0.,
          beam_size=0):
 
@@ -90,8 +90,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
     use_teacher_forcing = False
 
     if train:
-        enc_optim.zero_grad()
-        dec_optim.zero_grad()
+        optimizer.zero_grad()
         use_teacher_forcing = True if np.random.random() < tf_p else False
 
     enc_h0 = encoder.init_hidden(b_size)
@@ -152,8 +151,7 @@ def step(encoder, decoder, batch, enc_optim, dec_optim,
             if clip:
                 nn.utils.clip_grad_norm(encoder.parameters(), clip)
                 nn.utils.clip_grad_norm(decoder.parameters(), clip)
-            enc_optim.step()
-            dec_optim.step()
+            optimizer.step()
 
     return loss.data[0], preds, decoder_attentions
 
