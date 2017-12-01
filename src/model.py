@@ -62,11 +62,13 @@ class EncoderRNN(nn.Module):
     def forward(self, input, hidden, input_lengths):
         embedding = self.embedding(input)
         output = pack_padded_sequence(embedding, input_lengths)
+        
         for i in xrange(self.n_layers):
             output, hidden = self.rnn(output, hidden)
         output, output_lengths = pad_packed_sequence(output)
 
         return output, hidden
+
 
     def init_hidden(self, batch_size):
         weight = next(self.parameters()).data
@@ -112,7 +114,8 @@ class DecoderRNN(nn.Module):
 class Attention(nn.Module):
     def __init__(self, hidden_size, batch_size):
         super(Attention, self).__init__()
-        self.dense = nn.Linear(hidden_size*2, hidden_size)
+        self.dense_in  = nn.Linear(hidden_size, hidden_size)
+        self.dense_out = nn.Linear(hidden_size*2, hidden_size)
 
 
     def forward(self, hidden_state, encoder_outputs):
@@ -129,9 +132,13 @@ class Attention(nn.Module):
         note that len_targer should == 1, as were calculating
         the attention for 1 "word" at a time
         '''
+        sh = hidden_state.size()
+        hidden_state = self.dense_in(hidden_state.view(sh[0] * sh[1], sh[2]))
+        hidden_state = hidden_state.view(sh)
         grid = torch.bmm(hidden_state, 
                          encoder_outputs.permute(1,2,0).contiguous())
 
+        
         '''
         to have valid weights / probs, we need that our tensor sums 
         to 1 over the encoder outpus (dim=1). We need to perform
@@ -148,7 +155,6 @@ class Attention(nn.Module):
         context in order to extract the relevant features from it. 
         This is where the conditional extraction takes place
         '''
-
         weighted_context = torch.bmm(attn_weights, 
                                      encoder_outputs.transpose(1,0).contiguous())
 
@@ -158,7 +164,7 @@ class Attention(nn.Module):
 
         concat = torch.cat((weighted_context, hidden_state), -1)
 
-        out = F.tanh(self.dense(concat))
+        out = F.tanh(self.dense_out(concat))
 
         # b x 1 x dim --> 1 x b x dim
         return out.transpose(1,0).contiguous(), attn_weights
@@ -191,17 +197,17 @@ class AttentionDecoderRNN(nn.Module):
 
 
     def forward(self, input, hidden, encoder_outputs):
-
+        
         embedded = self.embedding(input).view(1, input.size(0), -1)
         embedded = self.dropout(embedded)
-
         # use this as input for yout rnn
         attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs)
- 
-        output = F.relu(attn_weights)
+        
+        output = attn_weights
         output, hidden = self.rnn(output, hidden)
         out = self.out(output).squeeze(0)
 
+       
         return out, hidden, softmax_over_input
 
 
