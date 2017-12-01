@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-function usage()
-{
+usage() {
 	echo " Usage : $0 [-d {test, val}] [-m <name-of-model>]"
 }
 
