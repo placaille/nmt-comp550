@@ -3,6 +3,7 @@ from __future__ import division
 import numpy as np
 import pdb
 import random
+import os
 import time
 import torch
 import torch.nn as nn
@@ -266,13 +267,13 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
         src_sentence = [corpus.dictionary['src'].idx2word[x] for x in src.data]
         tgt_sentence = [corpus.dictionary['tgt'].idx2word[x] for x in tgt.data]
         att_sentence = attn[0]
-        show_attention(src_sentence, tgt_sentence, att_sentence)
+        show_attention(src_sentence, tgt_sentence, att_sentence, name=i)
 
     loss = total_loss / iters
     return loss, dec_outs
 
 
-def show_attention(input_sentence, output_words, attentions):
+def show_attention(input_sentence, output_words, attentions, name=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     cax = ax.matshow(attentions.numpy(), cmap='bone')
@@ -287,4 +288,10 @@ def show_attention(input_sentence, output_words, attentions):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
 
+    if name is not None : 
+        if not os.path.exists('images'):
+            os.makedirs('images')
+        plt.savefig('images/' + str(name) + '.png')
+    else : 
+        plt.show()
     plt.show()
