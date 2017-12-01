@@ -262,12 +262,13 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
         if n_batch > upper_bd: break
 
     if args.show_attention and args.use_attention: 
-        batch_src, batch_tgt, len_src, len_tgt = batch
-        src, tgt = batch_src[:, 0], batch_tgt[:, 0]
-        src_sentence = [corpus.dictionary['src'].idx2word[x] for x in src.data]
-        tgt_sentence = [corpus.dictionary['tgt'].idx2word[x] for x in tgt.data]
-        att_sentence = attn[0]
-        show_attention(src_sentence, tgt_sentence, att_sentence, name=i)
+        for i in range(5):
+            batch_src, batch_tgt, len_src, len_tgt = batch
+            src, tgt = batch_src[:, i], batch_tgt[:, i]
+            src_sentence = [corpus.dictionary['src'].idx2word[x] for x in src.data]
+            tgt_sentence = [corpus.dictionary['tgt'].idx2word[x] for x in tgt.data]
+            att_sentence = attn[i]
+            show_attention(src_sentence, tgt_sentence, att_sentence, name=i)
 
     loss = total_loss / iters
     return loss, dec_outs
