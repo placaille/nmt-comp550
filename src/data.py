@@ -29,10 +29,11 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, path, lang):
+    def __init__(self, path, lang, reverse_src=False):
 
         path = os.path.join(path, lang)
 
+        self.reverse_src = reverse_src
         self.dictionary = {'src': Dictionary(), 'tgt': Dictionary()}
         lang_src, lang_tgt = lang.split('-')
 
@@ -98,16 +99,21 @@ class Corpus(object):
                     idx[token] = self.dictionary[src_tgt].word2idx[word]
                     token += 1
 
-                # create list of Tensors for easier process later on
+                # reverse src tokens if applicable
+                if self.reverse_src and src_tgt == 'src':
+                    idx.reverse()
+
+                # create list of lists for easier process later on
                 ids.append(idx)
 
         return ids
 
 
 class GenerationCorpus(Corpus):
-    def __init__(self, vocab, src_path, tgt_path):
+    def __init__(self, vocab, src_path, tgt_path, reverse_src):
 
         self.dictionary = vocab
+        self.reverse_src = reverse_src
 
         src = self.tokenize(src_path, 'src', False)
         tgt = self.tokenize(tgt_path, 'tgt', False)

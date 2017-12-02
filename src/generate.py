@@ -43,6 +43,10 @@ if torch.cuda.is_available():
     if not args.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
+# load training run args
+with open(os.path.join(args.path_to_model, '../args.info'), 'rb') as f:
+    train_args = pkl.load(f)
+
 ###############################################################################
 # Load data
 ###############################################################################
@@ -53,11 +57,8 @@ if args.verbose:
 # load the dictionary for generation
 with open(os.path.join(args.path_to_model, 'vocab.pt'), 'rb') as f:
     dictionary = pkl.load(f)
-corpus = data.GenerationCorpus(dictionary, args.data_src, args.data_tgt)
-
-# load training run args
-with open(os.path.join(args.path_to_model, '../args.info'), 'rb') as f:
-    train_args = pkl.load(f)
+corpus = data.GenerationCorpus(dictionary, args.data_src, args.data_tgt,
+                               train_args.reverse_src)
 
 ###############################################################################
 # Load the model

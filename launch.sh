@@ -23,10 +23,11 @@ python $python_script \
 	--lang en-fr \
 	--verbose \
 	--log-interval 20 \
+	--nhid 50 \
 	--batch_size 100 \
 	--epochs 20 \
 	--lr 0.001 \
-	--bidirectional \
+	--reverse_src \
 	--nlayers 1 \
 	--dropout 0.5 \
 	--teacher_force_prob 0.3 \
