@@ -34,6 +34,8 @@ parser.add_argument('--bidirectional', action='store_true',
                     help='use bidirectional encoder')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
+parser.add_argument('--reverse_src', action='store_true',
+                    help='reverse src sequence during encoding')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--teacher_force_prob', type=float, default=0.5,
