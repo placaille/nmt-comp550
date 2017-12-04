@@ -20,6 +20,8 @@ parser.add_argument('--model', type=str, default='LSTM',
                     help='type of recurrent net (LSTM, GRU)')
 parser.add_argument('--nhid', type=int, default=200,
                     help='number of hidden units per layer')
+parser.add_argument('--emb_size', type=int, default=200,
+                    help='size of word embeddings')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
 parser.add_argument('--lr', type=float, default=1e-3,

@@ -24,11 +24,11 @@ python $python_script \
 	--verbose \
 	--log-interval 20 \
 	--nhid 50 \
+	--emb_size 200 \
 	--batch_size 100 \
 	--epochs 20 \
 	--lr 0.001 \
-	--reverse_src \
-	--nlayers 1 \
+	--nlayers 2 \
+	--bidirectional \
 	--dropout 0.5 \
-	--teacher_force_prob 0.3 \
-	--use_attention
+	--teacher_force_prob 0.3
