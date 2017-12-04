@@ -12,6 +12,7 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
     encoder = EncoderRNN(args.model,
                          src_vocab_size,
                          args.nhid,
+                         args.emb_size,
                          args.batch_size,
                          args.nlayers,
                          args.bidirectional)
@@ -22,7 +23,6 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
         dec_nhid = args.nhid
 
     if args.use_attention:
-        
         decoder = Luong_Decoder(args.model, 
                                 dec_nhid, 
                                 tgt_vocab_size, 
@@ -32,6 +32,7 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
     else:
         decoder = DecoderRNN(args.model,
                              dec_nhid,
+                             args.emb_size,
                              tgt_vocab_size,
                              args.batch_size,
                              args.nlayers)
@@ -40,35 +41,34 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
 
 
 class EncoderRNN(nn.Module):
-    def __init__(self, rnn_type, input_size, hidden_size, batch_size,
+    def __init__(self, rnn_type, input_size, hidden_size, embedding_size, batch_size,
                  n_layers=2, bidirectional=False):
         super(EncoderRNN, self).__init__()
 
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.embedding_size = embedding_size
         self.batch_size = batch_size
         self.n_layers = n_layers
         self.rnn_type = rnn_type
         self.bidirectional = bidirectional
 
-        self.embedding = nn.Embedding(input_size, hidden_size)
+        self.embedding = nn.Embedding(input_size, embedding_size)
         if rnn_type == 'GRU':
-            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers, 
-                    bidirectional=bidirectional)
+            self.rnn = nn.GRU(embedding_size, hidden_size, n_layers,
+                              bidirectional=bidirectional)
         elif rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers, 
-                    bidirectional=bidirectional)
+            self.rnn = nn.LSTM(embedding_size, hidden_size, n_layers,
+                               bidirectional=bidirectional)
 
     def forward(self, input, hidden, input_lengths):
         embedding = self.embedding(input)
-        output = pack_padded_sequence(embedding, input_lengths)
-        
-        for i in xrange(self.n_layers):
-            output, hidden = self.rnn(output, hidden)
+        embedding_packed = pack_padded_sequence(embedding, input_lengths)
+
+        output, hidden = self.rnn(embedding_packed, hidden)
         output, output_lengths = pad_packed_sequence(output)
 
         return output, hidden
-
 
     def init_hidden(self, batch_size):
         weight = next(self.parameters()).data
@@ -83,33 +83,32 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    def __init__(self, rnn_type, hidden_size, output_size, batch_size, n_layers=2):
+    def __init__(self, rnn_type, hidden_size, embedding_size, output_size,
+                 batch_size, n_layers=2):
         super(DecoderRNN, self).__init__()
 
         self.hidden_size = hidden_size
+        self.embedding_size = embedding_size
         self.output_size = output_size
         self.batch_size = batch_size
         self.n_layers = n_layers
         self.rnn_type = rnn_type
         self.use_attention = False
 
-        self.embedding = nn.Embedding(output_size, hidden_size)
+        self.embedding = nn.Embedding(output_size, embedding_size)
         if rnn_type == 'GRU':
-            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers)
+            self.rnn = nn.GRU(embedding_size, hidden_size, n_layers)
         elif rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
+            self.rnn = nn.LSTM(embedding_size, hidden_size, n_layers)
 
         self.out = nn.Linear(hidden_size, output_size)
-        # self.softmax = nn.LogSoftmax(dim=1)  # done in masked_cross_ent
 
     def forward(self, input, hidden, encoder_outputs=None):
-        output = self.embedding(input).view(1, input.size(0), -1)
-        for i in xrange(self.n_layers):
-            output = F.relu(output)
-            output, hidden = self.rnn(output, hidden)
+        embedding = self.embedding(input).view(1, input.size(0), -1)
+
+        output, hidden = self.rnn(embedding, hidden)
         output = self.out(output.view(input.size(0), -1))
         return output, hidden, None
-
 
 class Luong_Attention(nn.Module):
     def __init__(self, hidden_size, score='general'):
@@ -187,7 +186,6 @@ class Luong_Decoder(nn.Module):
         elif rnn_type == 'LSTM':
             self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
 
-
     def forward(self, input, hidden, encoder_outputs):
         embedded = self.embedding(input).view(1, input.size(0), -1)
         embedded = self.dropout(embedded)
@@ -206,6 +204,3 @@ class Luong_Decoder(nn.Module):
         out = self.out(concat_output)
 
         return out, hidden, attn_weights
-
-
-

@@ -103,7 +103,7 @@ def step(encoder, decoder, batch, optimizer,
     if encoder.bidirectional:
         if encoder.rnn_type == 'LSTM':
             n2, b, h = context[0].size()
-            dec_hid = tuple([context[0].view(n2 // 2, b, h *2 ).contiguous(),
+            dec_hid = tuple([context[0].view(n2 // 2, b, h * 2).contiguous(),
                              context[1].view(n2 // 2, b, h * 2).contiguous()])
         else:
             n2, b, h = context.size()
