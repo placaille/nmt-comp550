@@ -22,13 +22,13 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
         dec_nhid = args.nhid
 
     if args.use_attention:
-        decoder = AttentionDecoderRNN(args.model,
-                                      dec_nhid,
-                                      tgt_vocab_size,
-                                      args.batch_size,
-                                      args.max_length,
-                                      args.nlayers,
-                                      args.dropout)
+        
+        decoder = Luong_Decoder(args.model, 
+                                dec_nhid, 
+                                tgt_vocab_size, 
+                                args.batch_size, 
+                                n_layers=args.nlayers)
+        
     else:
         decoder = DecoderRNN(args.model,
                              dec_nhid,
@@ -111,70 +111,58 @@ class DecoderRNN(nn.Module):
         return output, hidden, None
 
 
-class Attention(nn.Module):
-    def __init__(self, hidden_size, batch_size):
-        super(Attention, self).__init__()
-        self.dense_in  = nn.Linear(hidden_size, hidden_size)
-        self.dense_out = nn.Linear(hidden_size*2, hidden_size)
+class Bahdanau_Attention(nn.Module):
+    def __init__(self, hidden_size):
+        super(Bahdanau_Attention, self).__init__()
+        self.dense = nn.Linear(2 * hidden_size, hidden_size)
+        self.v     = nn.Linear(1 * hidden_size, 1)
 
 
     def forward(self, hidden_state, encoder_outputs):
 
         # make sure inputs have the same batch size
         assert hidden_state.size(1) == encoder_outputs.size(1)
+        
+        # make sure inputs have the same hidden dim
+        assert hidden_state.size(2) == encoder_outputs.size(2)
 
+        # make sure hidden_state has a time component
         assert len(hidden_state.size()) == 3 
 
+        # make sure we are only processing 1 decoder state at a time
+        assert hidden_state.size(0) == 1
+
+        # 1 x bs x nhid --> bs x 1 x nhid
         hidden_state = hidden_state.transpose(1, 0).contiguous()
+        encoder_outputs = encoder_outputs.transpose(1, 0).contiguous()
 
-        '''
-        build a batch x len_target x len_source tensor
-        note that len_targer should == 1, as were calculating
-        the attention for 1 "word" at a time
-        '''
-        sh = hidden_state.size()
-        hidden_state = self.dense_in(hidden_state.view(sh[0] * sh[1], sh[2]))
-        hidden_state = hidden_state.view(sh)
-        grid = torch.bmm(hidden_state, 
-                         encoder_outputs.permute(1,2,0).contiguous())
+        # bs x 1 x nhid --> bs x len(src) x nhid
+        hidden_state_r = hidden_state.expand(encoder_outputs.size())
 
+        # concatenate all encoder outputs with the decoder's hidden state
+        # bs x len(src) x 2*nhid
+        cat = torch.cat((hidden_state_r, encoder_outputs), 2)
         
-        '''
-        to have valid weights / probs, we need that our tensor sums 
-        to 1 over the encoder outpus (dim=1). We need to perform
-        a masked softmax in order to discard the padding
-        '''
-        mask = (grid != 0).float()
-        attn_weights = F.softmax(grid, dim=2) * mask
-        normalizer = attn_weights.sum(dim=2).unsqueeze(2)
-        attn_weights /= normalizer
+        # apply a linear transformation on this concatenated vector
+        # (bs x len(src)) x nhid
+        energy = self.dense(cat.view(-1, cat.size(2)))#.view(hidden_state_r.size()))
+
+        # get a scalar value for each (h_i, h_j) pair
+        # bs x len(src) x 1
+        # TODO : some people put a tanh activation here
+        energy = self.v(energy).view(hidden_state_r.size(0), hidden_state_r.size(1))
+
+        # push through a softmax to get a valid prob distribution
+        # how masking words : padded words with have
+        ###  1 x bs x len(src)
+        # bs x len(src)
+        return F.softmax(energy, dim=1)# .unsqueeze(0) # unsqueeze(1)
 
 
-        '''
-        once we have the attention weights, apply them to your 
-        context in order to extract the relevant features from it. 
-        This is where the conditional extraction takes place
-        '''
-        weighted_context = torch.bmm(attn_weights, 
-                                     encoder_outputs.transpose(1,0).contiguous())
-
-        '''
-        we merge our (weighted) context with the original input
-        '''
-
-        concat = torch.cat((weighted_context, hidden_state), -1)
-
-        out = F.tanh(self.dense_out(concat))
-
-        # b x 1 x dim --> 1 x b x dim
-        return out.transpose(1,0).contiguous(), attn_weights
-
-
-class AttentionDecoderRNN(nn.Module):
+class Bahdanau_Attention_Decoder(nn.Module):
     def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
                  max_length=50, n_layers=2, dropout_p=0.1, enc_bidir=False):
-        super(AttentionDecoderRNN, self).__init__()
-
+        super(Bahdanau_Attention_Decoder, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.batch_size  = batch_size
@@ -185,10 +173,105 @@ class AttentionDecoderRNN(nn.Module):
         self.enc_bidir = enc_bidir
 
         self.embedding    = nn.Embedding(output_size, hidden_size)
-        self.attn         = Attention(hidden_size, batch_size)
+        self.attn         = Bahdanau_Attention(hidden_size)
         self.dropout      = nn.Dropout(dropout_p)
         self.out          = nn.Linear(hidden_size, output_size)
-        self.concat       = nn.Linear(hidden_size*2, hidden_size)
+
+        if rnn_type == 'GRU':
+            self.rnn = nn.GRU(2*hidden_size, hidden_size, n_layers)
+        elif rnn_type == 'LSTM':
+            self.rnn = nn.LSTM(2*hidden_size, hidden_size, n_layers)
+
+
+    def forward(self, input, hidden, encoder_outputs):
+        
+        embedded = self.embedding(input).view(1, input.size(0), -1)
+        embedded = self.dropout(embedded)
+
+        # bs x len(src)
+        attn_weights  = self.attn(embedded, encoder_outputs)
+
+        # len(src) x bs x n_hid
+        context = attn_weights.transpose(0, 1).unsqueeze(2)  * encoder_outputs
+
+        # len(src) x bs (weighted average) # sum over len(src)
+        context = torch.sum(context, dim=0)
+        new_input = torch.cat((context.unsqueeze(0), embedded), 2)
+
+        output, hidden = self.rnn(new_input, hidden)
+        out = self.out(output).squeeze(0)
+
+        return out, hidden, attn_weights
+
+
+class Luong_Attention(nn.Module):
+    def __init__(self, hidden_size, score='general'):
+        super(Luong_Attention, self).__init__()
+
+        assert score.lower() in ['concat', 'general', 'dot']
+        self.score = score.lower()
+        wn = lambda x : nn.utils.weight_norm(x)
+        
+        if self.score == 'general': 
+            self.attn = wn(nn.Linear(hidden_size, hidden_size))
+        elif self.score == 'concat':
+            self.attn = wn(nn.Linear(2 * hidden_size, hidden_size))
+            self.v    = wn(nn.Parameter(torch.FloatTensor(1, hidden_size)))
+            
+    def forward(self, hidden_state, encoder_outputs):
+
+        # make sure inputs have the same batch size
+        assert hidden_state.size(1) == encoder_outputs.size(1)
+
+        assert len(hidden_state.size()) == 3 
+
+        # put batch on 1st axis (easier for batch matrix mul)
+        hidden_state    = hidden_state.transpose(1, 0).contiguous()
+        encoder_outputs = encoder_outputs.transpose(1, 0).contiguous()
+
+        if self.score == 'dot': 
+            # bs x tgt_len=1 x src_len
+            grid = torch.bmm(hidden_state, encoder_outputs.transpose(2,1)) 
+        elif self.score == 'general': 
+            # bs x tgt_len=1 x src_len
+            grid = torch.bmm(hidden_state, self.attn(encoder_outputs).transpose(2,1))
+        elif self.score == 'concat':
+            # bs x src_len x n_hid
+            cc = self.attn(torch.cat((hidden_state.expand(encoder_outputs.size()), 
+                                      encoder_outputs), 2))
+            # bs x src_len x 1
+            grid = cc.dot(self.v)
+            # bs x tgt_len=1 x n_hid
+            grid = grid.permute(0, 2, 1)
+
+        mask = (grid != 0).float()
+        attn_weights = F.softmax(grid, dim=2) * mask
+        normalizer = attn_weights.sum(dim=2).unsqueeze(2)
+        attn_weights /= normalizer
+
+        return attn_weights
+
+
+class Luong_Decoder(nn.Module):
+    def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
+                 max_length=50, n_layers=2, dropout_p=0.1, enc_bidir=False):
+        super(Luong_Decoder, self).__init__()
+
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.batch_size  = batch_size
+        self.n_layers    = n_layers
+        self.rnn_type    = rnn_type
+        self.dropout_p   = dropout_p
+        self.use_attention = True
+        self.enc_bidir = enc_bidir
+        wn = lambda x : nn.utils.weight_norm(x)
+
+        self.embedding    = nn.Embedding(output_size, hidden_size)
+        self.attn         = Luong_Attention(hidden_size)
+        self.dropout      = nn.Dropout(dropout_p)
+        self.out          = wn(nn.Linear(hidden_size, output_size))
+        self.concat       = wn(nn.Linear(hidden_size*2, hidden_size))
 
         if rnn_type == 'GRU':
             self.rnn = nn.GRU(hidden_size, hidden_size, n_layers)
@@ -197,18 +280,23 @@ class AttentionDecoderRNN(nn.Module):
 
 
     def forward(self, input, hidden, encoder_outputs):
-        
         embedded = self.embedding(input).view(1, input.size(0), -1)
         embedded = self.dropout(embedded)
         # use this as input for yout rnn
-        attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs)
         
-        output = attn_weights
-        output, hidden = self.rnn(output, hidden)
-        out = self.out(output).squeeze(0)
+        rnn_output, hidden = self.rnn(embedded, hidden)
+        attn_weights  = self.attn(rnn_output, encoder_outputs)
+        # attn_weights : bs x 1 x src_len
+        # enc_outputs  : src_len x bs x nhid
+        context = encoder_outputs * attn_weights.permute(2, 0, 1)
+        # bs x nhid
+        context = context.sum(dim=0)
+        concat_input  = torch.cat((context, rnn_output.squeeze(0)), 1)
+        concat_output = F.tanh((self.concat(concat_input)))
 
-       
-        return out, hidden, softmax_over_input
+        out = self.out(concat_output)
+
+        return out, hidden, attn_weights
 
 
 

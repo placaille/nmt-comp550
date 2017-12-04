@@ -16,7 +16,7 @@ string="$(date) - Running on $(hostname) - $run_name"
 
 echo $string
 echo $string >> logs
-python $python_script \
+CUDA_VISIBLE_DEVICES=2 python $python_script \
 	--cuda \
 	--data $data_dir \
 	--save $save_dir \
@@ -30,5 +30,9 @@ python $python_script \
 	--reverse_src \
 	--nlayers 1 \
 	--dropout 0.5 \
-	--teacher_force_prob 0.3 \
-	--use_attention
+    --model GRU \
+    --teacher_force_prob 0.3 \
+  	--clip 10 \
+    --nhid 200 \
+    --show_attention \
+ 	--bidirectional 
