@@ -53,22 +53,20 @@ class EncoderRNN(nn.Module):
 
         self.embedding = nn.Embedding(input_size, hidden_size)
         if rnn_type == 'GRU':
-            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers, 
-                    bidirectional=bidirectional)
+            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers,
+                              bidirectional=bidirectional)
         elif rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers, 
-                    bidirectional=bidirectional)
+            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers,
+                               bidirectional=bidirectional)
 
     def forward(self, input, hidden, input_lengths):
         embedding = self.embedding(input)
         output = pack_padded_sequence(embedding, input_lengths)
-        
-        for i in xrange(self.n_layers):
-            output, hidden = self.rnn(output, hidden)
+
+        output, hidden = self.rnn(output, hidden)
         output, output_lengths = pad_packed_sequence(output)
 
         return output, hidden
-
 
     def init_hidden(self, batch_size):
         weight = next(self.parameters()).data
@@ -114,7 +112,7 @@ class DecoderRNN(nn.Module):
 class Attention(nn.Module):
     def __init__(self, hidden_size, batch_size):
         super(Attention, self).__init__()
-        self.dense_in  = nn.Linear(hidden_size, hidden_size)
+        self.dense_in = nn.Linear(hidden_size, hidden_size)
         self.dense_out = nn.Linear(hidden_size*2, hidden_size)
 
 
@@ -167,7 +165,7 @@ class Attention(nn.Module):
         out = F.tanh(self.dense_out(concat))
 
         # b x 1 x dim --> 1 x b x dim
-        return out.transpose(1,0).contiguous(), attn_weights
+        return out.transpose(1, 0).contiguous(), attn_weights
 
 
 class AttentionDecoderRNN(nn.Module):
@@ -195,20 +193,15 @@ class AttentionDecoderRNN(nn.Module):
         elif rnn_type == 'LSTM':
             self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
 
-
     def forward(self, input, hidden, encoder_outputs):
-        
+
         embedded = self.embedding(input).view(1, input.size(0), -1)
         embedded = self.dropout(embedded)
         # use this as input for yout rnn
         attn_weights, softmax_over_input = self.attn(embedded, encoder_outputs)
-        
+
         output = attn_weights
         output, hidden = self.rnn(output, hidden)
         out = self.out(output).squeeze(0)
 
-       
         return out, hidden, softmax_over_input
-
-
-
