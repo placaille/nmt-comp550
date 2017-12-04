@@ -142,7 +142,10 @@ def step(encoder, decoder, batch, optimizer,
             dec_out, dec_hid, attn_weights = decoder(dec_input, dec_hid, enc_out)
 
             if decoder.use_attention:
+
                 decoder_attentions[:, :attn_weights.size(2), step] += attn_weights.squeeze().cpu().data
+
+                # decoder_attentions[:, :attn_weights.size(1), step] += attn_weights.squeeze().cpu().data
 
             # get highest scoring token and value
             top_val, top_tok = dec_out.data.topk(1, dim=1)
@@ -231,8 +234,16 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
             batch_src = batch_src.cuda()
             batch_tgt = batch_tgt.cuda()
 
+        '''
+        Simple test to see if attention mechanism is working
+        ind = torch.arange(batch_src.size(0) - 1, -1, -1).long()
+        ind = ind.cuda() if cuda else ind
+        batch_tgt = batch_src[ind]
+        len_tgt_s = len_src_s[::-1]
+        # import pdb; pdb.set_trace()
+        yield batch_src, batch_src, len_src_s, len_src_s
+        '''
         yield batch_src, batch_tgt, len_src_s, len_tgt_s
-
 
 def evaluate(dataset, encoder, decoder, args, corpus=None):
     # Turn on evaluation mode which disables dropout.
@@ -262,19 +273,19 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
         if n_batch > upper_bd: break
 
     if args.show_attention and args.use_attention: 
-        for i in range(5):
+        for i in range(2):
             batch_src, batch_tgt, len_src, len_tgt = batch
             src, tgt = batch_src[:, i], batch_tgt[:, i]
             src_sentence = [corpus.dictionary['src'].idx2word[x] for x in src.data]
             tgt_sentence = [corpus.dictionary['tgt'].idx2word[x] for x in tgt.data]
-            att_sentence = attn[i]
+            att_sentence = attn[i].transpose(1,0)
             show_attention(src_sentence, tgt_sentence, att_sentence, name=i)
 
     loss = total_loss / iters
     return loss, dec_outs
 
 
-def show_attention(input_sentence, output_words, attentions, name=None):
+def show_attention(input_sentence, output_words, attentions, name=0):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     cax = ax.matshow(attentions.numpy(), cmap='bone')
@@ -295,4 +306,4 @@ def show_attention(input_sentence, output_words, attentions, name=None):
         plt.savefig('images/' + str(name) + '.png')
     else : 
         plt.show()
-    plt.show()
+    plt.close()
