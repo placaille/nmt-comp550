@@ -193,7 +193,7 @@ for epoch in range(1, args.epochs+1):
 
 print('=' * 89)
 if args.verbose:
-    print('Loading best model for epoch {} and evaluating test..'
+    print('| Loading best model for epoch {} and evaluating test..'
           .format(best_epoch))
 
 # create new model of same specs
