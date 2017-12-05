@@ -178,7 +178,7 @@ s_func = SmoothingFunction()
 bleu_score = corpus_bleu(gold_tokens, pred_tokens,
                          smoothing_function=s_func.method3)
 
-print('BLEU score:\t{:5.4f}'.format(bleu_score * 100))
-with open(os.path.join(args.path_to_model, '../bleu_score.info'), 'w') as f:
-    f.write('BLEU score:\t{:5.4f}'.format(bleu_score * 100))
+print('{} BLEU score:\t{:5.4f}'.format(pred_name, bleu_score * 100))
+with open(os.path.join(args.path_to_model, '../bleu_score.info'), 'a') as f:
+    f.write('{} BLEU score:\t{:5.4f}'.format(pred_name, bleu_score * 100))
 print('=' * 89)
