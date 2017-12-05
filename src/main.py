@@ -185,8 +185,8 @@ for epoch in range(1, args.epochs+1):
 
         enc_path = os.path.join(args.save, 'encoder_params.pt')
         dec_path = os.path.join(args.save, 'decoder_params.pt')
-        # torch.save(encoder.state_dict(), enc_path)
-        # torch.save(decoder.state_dict(), dec_path)
+        torch.save(encoder.state_dict(), enc_path)
+        torch.save(decoder.state_dict(), dec_path)
 
         best_val_loss = val_loss
     print('-' * 89)
@@ -196,32 +196,23 @@ if args.verbose:
     print('Loading best model for epoch {} and evaluating test..'
           .format(best_epoch))
 
-# # create new model of same specs
-# best_encoder, best_decoder = model.build_model(len(corpus.dictionary['src']),
-#                                                len(corpus.dictionary['tgt']),
-#                                                args=args)
+# create new model of same specs
+best_encoder, best_decoder = model.build_model(len(corpus.dictionary['src']),
+                                               len(corpus.dictionary['tgt']),
+                                               args=args)
 
-# if args.cuda:
-#     best_encoder.cuda()
-#     best_decoder.cuda()
+if args.cuda:
+    best_encoder.cuda()
+    best_decoder.cuda()
 
-# # Load the best saved model params
-# best_enc_path = os.path.join(args.save, 'encoder_params.pt')
-# best_dec_path = os.path.join(args.save, 'decoder_params.pt')
+# Load the best saved model params
+best_enc_path = os.path.join(args.save, 'encoder_params.pt')
+best_dec_path = os.path.join(args.save, 'decoder_params.pt')
 
-# best_encoder.load_state_dict(torch.load(best_enc_path))
-# best_decoder.load_state_dict(torch.load(best_dec_path))
+best_encoder.load_state_dict(torch.load(best_enc_path))
+best_decoder.load_state_dict(torch.load(best_dec_path))
 
 # Run on test data.
-new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
-print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    new_test_loss, np.exp(new_test_loss)))
-new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
-print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    new_test_loss, np.exp(new_test_loss)))
-new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
-print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    new_test_loss, np.exp(new_test_loss)))
 new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     new_test_loss, np.exp(new_test_loss)))

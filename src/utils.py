@@ -261,7 +261,7 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
 
         if n_batch > upper_bd: break
 
-    if args.show_attention and args.use_attention:
+    if args.show_attention and args.use_attention: 
         for i in range(5):
             batch_src, batch_tgt, len_src, len_tgt = batch
             src, tgt = batch_src[:, i], batch_tgt[:, i]
