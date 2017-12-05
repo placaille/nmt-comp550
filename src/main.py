@@ -161,6 +161,36 @@ def train_epoch():
         if n_batch > upper_bd : break
 
 
+def eval_dataset(valid_test='valid'):
+    # turn off training mode to disable dropout
+    encoder.eval()
+    decoder.eval()
+
+    if valid_test == 'valid':
+        dataset = corpus.valid
+    elif valid_test == 'test':
+        dataset = corpus.test
+    else:
+        raise 'Wrong input'
+
+    # initialize minibatch generator
+    minibatches = utils.minibatch_generator(args.batch_size,
+                                            dataset,
+                                            args.cuda,
+                                            shuffle=False)
+
+    total_loss = 0
+    for n_batch, batch in enumerate(minibatches):
+
+        loss, _, _ = utils.step(encoder, decoder, batch, optimizer, False,
+                                args.cuda, args.max_length, args.clip,
+                                tf_p=0)
+
+        total_loss += loss
+
+    return total_loss / float(n_batch + 1)
+
+
 if args.verbose:
     print('Starting training..')
 
@@ -171,7 +201,9 @@ best_epoch = 0
 for epoch in range(1, args.epochs+1):
     epoch_start_time = time.time()
     train_epoch()
-    val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder, args, corpus=corpus)
+    while True:
+        val_loss = eval_dataset('valid')
+        print(val_loss)
     scheduler.step(val_loss)
     print('-' * 89)
     print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
@@ -193,27 +225,27 @@ for epoch in range(1, args.epochs+1):
 
 print('=' * 89)
 if args.verbose:
-    print('Loading best model for epoch {} and evaluating test..'
+    print('| Loading best model for epoch {} and evaluating test..'
           .format(best_epoch))
 
 # create new model of same specs
-best_encoder, best_decoder = model.build_model(len(corpus.dictionary['src']),
-                                               len(corpus.dictionary['tgt']),
-                                               args=args)
+encoder, decoder = model.build_model(len(corpus.dictionary['src']),
+                                     len(corpus.dictionary['tgt']),
+                                     args=args)
 
 if args.cuda:
-    best_encoder.cuda()
-    best_decoder.cuda()
+    encoder.cuda()
+    decoder.cuda()
 
 # Load the best saved model params
 best_enc_path = os.path.join(args.save, 'encoder_params.pt')
 best_dec_path = os.path.join(args.save, 'decoder_params.pt')
 
-best_encoder.load_state_dict(torch.load(best_enc_path))
-best_decoder.load_state_dict(torch.load(best_dec_path))
+encoder.load_state_dict(torch.load(best_enc_path))
+decoder.load_state_dict(torch.load(best_dec_path))
 
 # Run on test data.
-new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
+new_test_loss = eval_dataset('test')
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     new_test_loss, np.exp(new_test_loss)))
 print('=' * 89)

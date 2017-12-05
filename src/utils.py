@@ -185,8 +185,9 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
     PAD_token = 0
 
     def fill_seq(input, padded_length, fill_token):
-        input += [fill_token] * (padded_length - len(input))
-        return input
+        input_padded = input[:]
+        input_padded += [fill_token] * (padded_length - len(input))
+        return input_padded
 
     src, tgt = dataset
 
