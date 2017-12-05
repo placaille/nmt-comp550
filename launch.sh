@@ -23,12 +23,11 @@ python $python_script \
 	--lang en-fr \
 	--verbose \
 	--log-interval 20 \
-	--nhid 50 \
-	--emb_size 200 \
+	--nhid 100 \
+	--emb_size 75 \
 	--batch_size 100 \
-	--epochs 20 \
+	--epochs 3 \
 	--lr 0.001 \
-	--nlayers 2 \
-	--bidirectional \
-	--dropout 0.5 \
-	--teacher_force_prob 0.3
+	--nlayers 1 \
+	--dropout 0.0 \
+	--teacher_force_prob 0.7

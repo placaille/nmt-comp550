@@ -116,7 +116,8 @@ optimizer = torch.optim.Adam(list(encoder.parameters()) + \
 # scheduler to reduce the lr by 4 (*0.25) if val loss doesn't decr for 2 epoch
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                        factor=0.25,
-                                                       verbose=True)
+                                                       verbose=True,
+                                                       patience=0)
 
 ###############################################################################
 # Training code
@@ -164,57 +165,64 @@ if args.verbose:
     print('Starting training..')
 
 # Loop over epochs.
-best_val_loss = None
+best_val_loss = float('inf')
+best_epoch = 0
 # At any point you can hit Ctrl + C to break out of training early.
-try:
-    for epoch in range(1, args.epochs+1):
-        epoch_start_time = time.time()
-        train_epoch()
-        val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder,args, corpus=corpus)
-        scheduler.step(val_loss)
-        print('-' * 89)
-        print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-              'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                         val_loss, np.exp(val_loss)))
-        print('-' * 89)
-        # Save the model if the validation loss is the best we've seen so far.
-        if not best_val_loss or val_loss < best_val_loss:
-            with open(os.path.join(args.save, 'encoder_params.pt'), 'wb') as f:
-                torch.save(encoder.state_dict(), f)
-            with open(os.path.join(args.save, 'decoder_params.pt'), 'wb') as f:
-                torch.save(decoder.state_dict(), f)
-
-            best_val_loss = val_loss
-        else:
-            # just for illustration purposes, doesn't change nothing
-            lr *= 0.25
-
-except KeyboardInterrupt:
+for epoch in range(1, args.epochs+1):
+    epoch_start_time = time.time()
+    train_epoch()
+    val_loss, _ = utils.evaluate(corpus.valid, encoder, decoder, args, corpus=corpus)
+    scheduler.step(val_loss)
     print('-' * 89)
-    print('Exiting from training early')
+    print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
+          'val ppl {:5.2f}'.format(epoch, (time.time() - epoch_start_time),
+                                   val_loss, np.exp(val_loss)))
+    # Save the model if the validation loss is the best we've seen so far.
+    if val_loss < best_val_loss:
+        best_epoch = epoch
+        if args.verbose:
+            print('| Saving model parameters..')
 
+        enc_path = os.path.join(args.save, 'encoder_params.pt')
+        dec_path = os.path.join(args.save, 'decoder_params.pt')
+        # torch.save(encoder.state_dict(), enc_path)
+        # torch.save(decoder.state_dict(), dec_path)
+
+        best_val_loss = val_loss
+    print('-' * 89)
 
 print('=' * 89)
 if args.verbose:
-    print('Loading best model and evaluating test..')
+    print('Loading best model for epoch {} and evaluating test..'
+          .format(best_epoch))
 
-# create new model of same specs
-encoder, decoder = model.build_model(len(corpus.dictionary['src']),
-                                     len(corpus.dictionary['tgt']),
-                                     args=args)
+# # create new model of same specs
+# best_encoder, best_decoder = model.build_model(len(corpus.dictionary['src']),
+#                                                len(corpus.dictionary['tgt']),
+#                                                args=args)
 
-if args.cuda:
-    encoder.cuda()
-    decoder.cuda()
+# if args.cuda:
+#     best_encoder.cuda()
+#     best_decoder.cuda()
 
-# Load the best saved model params
-with open(os.path.join(args.save, 'encoder_params.pt'), 'rb') as f:
-    encoder.load_state_dict(torch.load(f))
-with open(os.path.join(args.save, 'decoder_params.pt'), 'rb') as f:
-    decoder.load_state_dict(torch.load(f))
+# # Load the best saved model params
+# best_enc_path = os.path.join(args.save, 'encoder_params.pt')
+# best_dec_path = os.path.join(args.save, 'decoder_params.pt')
+
+# best_encoder.load_state_dict(torch.load(best_enc_path))
+# best_decoder.load_state_dict(torch.load(best_dec_path))
 
 # Run on test data.
-test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
+new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    test_loss, np.exp(test_loss)))
+    new_test_loss, np.exp(new_test_loss)))
+new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
+print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
+    new_test_loss, np.exp(new_test_loss)))
+new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
+print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
+    new_test_loss, np.exp(new_test_loss)))
+new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
+print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
+    new_test_loss, np.exp(new_test_loss)))
 print('=' * 89)
