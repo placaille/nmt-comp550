@@ -26,6 +26,8 @@ parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
 parser.add_argument('--lr', type=float, default=1e-3,
                     help='initial learning rate')
+parser.add_argument('--lr_patience', type=float, default=0,
+                    help='patience between val losses before reducing')
 parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
@@ -117,7 +119,7 @@ optimizer = torch.optim.Adam(list(encoder.parameters()) + \
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                        factor=0.25,
                                                        verbose=True,
-                                                       patience=0)
+                                                       patience=args.lr_patience)
 
 ###############################################################################
 # Training code

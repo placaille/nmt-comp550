@@ -21,12 +21,13 @@ python $python_script \
 	--data $data_dir \
 	--save $save_dir \
 	--lang en-fr \
+	--lr_patience 1 \
 	--verbose \
 	--log-interval 20 \
 	--nhid 100 \
 	--emb_size 75 \
 	--batch_size 100 \
-	--epochs 3 \
+	--epochs 20 \
 	--lr 0.001 \
 	--nlayers 1 \
 	--dropout 0.0 \
