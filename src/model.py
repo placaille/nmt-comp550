@@ -23,12 +23,13 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
         dec_nhid = args.nhid
 
     if args.use_attention:
-        decoder = Luong_Decoder(args.model, 
-                                dec_nhid, 
-                                tgt_vocab_size, 
-                                args.batch_size, 
-                                n_layers=args.nlayers)
-        
+        decoder = Luong_Decoder(args.model,
+                                dec_nhid,
+                                tgt_vocab_size,
+                                args.batch_size,
+                                n_layers=args.nlayers,
+                                dropout_p=args.dropout)
+
     else:
         decoder = DecoderRNN(args.model,
                              dec_nhid,
