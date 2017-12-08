@@ -48,6 +48,7 @@ python $python_script \
 	--data_tgt $path_to_tgt \
 	--path_to_model $path_to_model \
 	--log-interval 5 \
+	--max_ngram 4 \
 	--verbose \
 	--batch_size 25 \
 	--beam_size 15

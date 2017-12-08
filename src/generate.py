@@ -31,6 +31,8 @@ parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='report interval')
 parser.add_argument('--beam_size', type=int, default=5, metavar='N',
                     help='width of beam search during generation')
+parser.add_argument('--max_ngram', type=int, default=4,
+                    help='maximum ngram to be considered for bleu (inclusive)')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
@@ -175,9 +177,10 @@ if args.verbose:
 
 # Scoring the dataset using nltk's bleu_score
 s_func = SmoothingFunction()
+weights = [1/float(args.max_ngram) for _ in range(args.max_ngram)]
 bleu_score = corpus_bleu(gold_tokens, pred_tokens,
                          smoothing_function=s_func.method3,
-                         weights=[1/3., 1/3., 1/3.])
+                         weights=weights)
 
 print('{} BLEU score:\t{:5.4f}'.format(pred_name, bleu_score * 100))
 with open(os.path.join(args.path_to_model, '../bleu_score.info'), 'a') as f:
