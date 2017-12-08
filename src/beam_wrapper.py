@@ -39,7 +39,7 @@ def create_initial_beam(decoder_state, i, enc_out, batch_size=1):
 
     if enc_out is not None:
         # means we are using attention
-        enc_out = enc_out[:, 1].unsqueeze(1).contiguous()
+        enc_out = enc_out[:, i].unsqueeze(1).contiguous()
 
     return BeamToken(
         path=[[] for _ in range(batch_size)],
@@ -125,7 +125,7 @@ class BSWrapper(object):
                     dec_input = dec_input.cuda()
 
                 # evaluate next_step
-                dec_out, dec_hid, _ = self.decoder(dec_input, dec_hid, enc_out)
+                dec_out, dec_hid, attn_weights = self.decoder(dec_input, dec_hid, enc_out)
 
                 # Reshape tensor (remove 1 size batch)
                 log_p = functional.log_softmax(dec_out, 1)

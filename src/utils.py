@@ -133,7 +133,7 @@ def step(encoder, decoder, batch, optimizer,
 
         preds = torch.LongTensor(beam_searcher.decode())
 
-        return 0, preds
+        return 0, preds, 0
 
     else:
 

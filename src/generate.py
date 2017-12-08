@@ -111,9 +111,9 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     minibatches = utils.minibatch_generator(batch_size, dataset, cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        _, pred = utils.step(encoder, decoder, batch, None, train=False,
-                             cuda=cuda, max_length=max_length,
-                             beam_size=args.beam_size)
+        _, pred, _ = utils.step(encoder, decoder, batch, None, train=False,
+                                cuda=cuda, max_length=max_length,
+                                beam_size=args.beam_size)
 
         # true target
         gold = batch[1].data
@@ -176,7 +176,8 @@ if args.verbose:
 # Scoring the dataset using nltk's bleu_score
 s_func = SmoothingFunction()
 bleu_score = corpus_bleu(gold_tokens, pred_tokens,
-                         smoothing_function=s_func.method3)
+                         smoothing_function=s_func.method3,
+                         weights=[1/3., 1/3., 1/3.])
 
 print('{} BLEU score:\t{:5.4f}'.format(pred_name, bleu_score * 100))
 with open(os.path.join(args.path_to_model, '../bleu_score.info'), 'a') as f:
