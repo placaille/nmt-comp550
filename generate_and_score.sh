@@ -30,6 +30,7 @@ fi
 data_dir=./data/multi30k
 out_dir=./out
 python_script=./src/generate.py
+bleu_script=./multi-bleu.perl
 
 path_to_model=$out_dir/$model/bin
 path_to_src=$data_dir/en-fr/$data.en
@@ -48,7 +49,13 @@ python $python_script \
 	--data_tgt $path_to_tgt \
 	--path_to_model $path_to_model \
 	--log-interval 5 \
-	--max_ngram 4 \
 	--verbose \
 	--batch_size 25 \
 	--beam_size 15
+
+pred_file=$out_dir/$model/pred/pred_$data\_en-fr.txt
+gold_file=$out_dir/$model/gold/gold_$data\_en-fr.txt
+
+echo Scoring $data predictions..
+perl $bleu_script $gold_file < $pred_file
+perl -E "print '=' x 89"

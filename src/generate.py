@@ -6,8 +6,6 @@ import argparse
 import time
 import torch
 import pickle as pkl
-from nltk.translate.bleu_score import corpus_bleu
-from nltk.translate.bleu_score import SmoothingFunction
 
 import utils  # custom file with lors of functions used
 import data
@@ -31,8 +29,6 @@ parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='report interval')
 parser.add_argument('--beam_size', type=int, default=5, metavar='N',
                     help='width of beam search during generation')
-parser.add_argument('--max_ngram', type=int, default=4,
-                    help='maximum ngram to be considered for bleu (inclusive)')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr'],
                     help='in-out languages')
@@ -170,19 +166,4 @@ with open(gold_file, 'w') as f:
 
 print('{} was saved.'.format(pred_file))
 print('{} was saved.'.format(gold_file))
-print('=' * 89)
-
-if args.verbose:
-    print('Scoring predictions..')
-
-# Scoring the dataset using nltk's bleu_score
-s_func = SmoothingFunction()
-weights = [1/float(args.max_ngram) for _ in range(args.max_ngram)]
-bleu_score = corpus_bleu(gold_tokens, pred_tokens,
-                         smoothing_function=s_func.method3,
-                         weights=weights)
-
-print('{} BLEU score:\t{:5.4f}'.format(pred_name, bleu_score * 100))
-with open(os.path.join(args.path_to_model, '../bleu_score.info'), 'a') as f:
-    f.write('{} BLEU score:\t{:5.4f}'.format(pred_name, bleu_score * 100))
 print('=' * 89)
