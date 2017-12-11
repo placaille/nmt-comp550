@@ -55,7 +55,11 @@ python $python_script \
 
 pred_file=$out_dir/$model/pred/pred_$data\_en-fr.txt
 gold_file=$out_dir/$model/gold/gold_$data\_en-fr.txt
+pred_file_nounk=$out_dir/$model/pred/pred_$data\_en-fr_nounk.txt
+gold_file_nounk=$out_dir/$model/gold/gold_$data\_en-fr_nounk.txt
 
-echo Scoring $data predictions..
+echo Scoring $data predictions \(keeping unkown\)..
 perl $bleu_script $gold_file < $pred_file
+echo Scoring $data predictions \(removed unkown\)..
+perl $bleu_script $gold_file_nounk < $pred_file_nounk
 perl -E "print '=' x 89"
