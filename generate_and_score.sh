@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 usage() {
-	echo " Usage : $0 [-d {test, val}] [-m <name-of-model>]"
+	echo " Usage : $0 [-d {test2016, test2017, val}] [-m <name-of-model>]"
 }
 
 # Flags

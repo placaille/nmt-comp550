@@ -45,18 +45,24 @@ class Corpus(object):
             'val.{}'.format(lang_src)), 'src', False)
         valid_tgt = self.tokenize(os.path.join(path,
             'val.{}'.format(lang_tgt)), 'tgt', False)
-        test_src = self.tokenize(os.path.join(path,
-            'test.{}'.format(lang_src)), 'src', False)
-        test_tgt = self.tokenize(os.path.join(path,
-            'test.{}'.format(lang_tgt)), 'tgt', False)
+        test2016_src = self.tokenize(os.path.join(path,
+            'test2016.{}'.format(lang_src)), 'src', False)
+        test2016_tgt = self.tokenize(os.path.join(path,
+            'test2016.{}'.format(lang_tgt)), 'tgt', False)
+        test2017_src = self.tokenize(os.path.join(path,
+            'test2017.{}'.format(lang_src)), 'src', False)
+        test2017_tgt = self.tokenize(os.path.join(path,
+            'test2017.{}'.format(lang_tgt)), 'tgt', False)
 
         self.train = (train_src, train_tgt)
         self.valid = (valid_src, valid_tgt)
-        self.test = (test_src, test_tgt)
+        self.test2016 = (test2016_src, test2016_tgt)
+        self.test2017 = (test2017_src, test2017_tgt)
 
         self.n_sent_train = len(train_src)
         self.n_sent_valid = len(valid_src)
-        self.n_sent_test = len(test_src)
+        self.n_sent_test2016 = len(test2016_src)
+        self.n_sent_test2017 = len(test2017_src)
 
     def tokenize(self, path, src_tgt, train=False):
         """Tokenizes a text file."""

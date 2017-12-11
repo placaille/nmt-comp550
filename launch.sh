@@ -24,11 +24,13 @@ python $python_script \
 	--lr_patience 1 \
 	--verbose \
 	--log-interval 20 \
-	--nhid 100 \
-	--emb_size 75 \
+	--nhid 500 \
+	--emb_size 500 \
 	--batch_size 100 \
-	--epochs 20 \
-	--lr 0.001 \
+	--epochs 30 \
+	--lr 0.01 \
+	--bidirectional \
 	--nlayers 1 \
-	--dropout 0.0 \
-	--teacher_force_prob 0.7
+	--clip 1.0 \
+	--dropout 0.3 \
+	--teacher_force_prob 0.3
