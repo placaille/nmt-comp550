@@ -150,20 +150,30 @@ gold_name = os.path.basename(args.data_tgt).split('.')[0]
 
 pred_file = os.path.join(pred_dir, 'pred_{}_{}.txt'.format(pred_name, args.lang))
 gold_file = os.path.join(gold_dir, 'gold_{}_{}.txt'.format(gold_name, args.lang))
+pred_file_nounk = os.path.join(pred_dir, 'pred_{}_{}_nounk.txt'.format(pred_name, args.lang))
+gold_file_nounk = os.path.join(gold_dir, 'gold_{}_{}_nounk.txt'.format(gold_name, args.lang))
 
 pred_tokens, gold_tokens = make_preds(corpus.gen_dataset, encoder, decoder,
                                       corpus.dictionary['tgt'],
                                       args.batch_size, args.cuda,
                                       args.max_length)
 
-with open(pred_file, 'w') as f:
-    for tokens in pred_tokens:
-        f.write(' '.join(tokens).encode('utf8') + '\n')
-
-with open(gold_file, 'w') as f:
-    for tokens in gold_tokens:
-        f.write(' '.join(tokens).encode('utf8') + '\n')
+with open(pred_file, 'w') as f, open(gold_file, 'w') as g:
+    for pred_tok, gold_tok in zip(pred_tokens, gold_tokens):
+        f.write(' '.join(pred_tok).encode('utf8') + '\n')
+        g.write(' '.join(gold_tok).encode('utf8') + '\n')
 
 print('{} was saved.'.format(pred_file))
 print('{} was saved.'.format(gold_file))
+
+with open(pred_file_nounk, 'w') as f, open(gold_file_nounk, 'w') as g:
+    for pred_tok, gold_tok in zip(pred_tokens, gold_tokens):
+        # filter out sentences that had "unknown" token in gold
+        if u'<unk>' not in gold_tok:
+            f.write(' '.join(pred_tok).encode('utf8') + '\n')
+            g.write(' '.join(gold_tok).encode('utf8') + '\n')
+
+print('{} was saved.'.format(pred_file_nounk))
+print('{} was saved.'.format(gold_file_nounk))
+
 print('=' * 89)
