@@ -111,6 +111,7 @@ class DecoderRNN(nn.Module):
         output = self.out(output.view(input.size(0), -1))
         return output, hidden, None
 
+
 class Luong_Attention(nn.Module):
     def __init__(self, hidden_size, score='general'):
         super(Luong_Attention, self).__init__()
@@ -125,7 +126,6 @@ class Luong_Attention(nn.Module):
             raise Exception('concat disabled for now. results are poor')
             self.attn = wn(nn.Linear(2 * hidden_size, hidden_size))
             self.v = wn(nn.Linear(hidden_size, 1))
-
 
     def forward(self, hidden_state, encoder_outputs):
 
