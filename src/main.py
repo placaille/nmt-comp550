@@ -215,7 +215,9 @@ best_encoder.load_state_dict(torch.load(best_enc_path))
 best_decoder.load_state_dict(torch.load(best_dec_path))
 
 # Run on test data.
-new_test_loss, _ = utils.evaluate(corpus.test, encoder, decoder, args, corpus=corpus)
-print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    new_test_loss, np.exp(new_test_loss)))
+test2016_loss, _ = utils.evaluate(corpus.test2016, encoder, decoder, args, corpus=corpus)
+test2017_loss, _ = utils.evaluate(corpus.test2017, encoder, decoder, args, corpus=corpus)
+print('| End of training | test 2016 loss {:5.2f} | test 2017 loss {:5.2f} |'
+      'test 2016 ppl {:8.2f} | test 2017 ppl {:8.2f}'.format( test2016_loss,
+          test2017_loss, np.exp(test2016_loss), np.exp(test2017_loss)))
 print('=' * 89)
