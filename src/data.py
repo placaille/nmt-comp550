@@ -68,8 +68,6 @@ class Corpus(object):
         """Tokenizes a text file."""
         assert os.path.exists(path)
         # Add words to the dictionary
-        print(path)
-        pdb.set_trace()
         with open(path, 'r') as f:
             sentences = 0
             max_tokens = 0
