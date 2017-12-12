@@ -10,28 +10,28 @@ for reference.
 The code for the masked_cross_entropy was borrowed from [this
 repo](https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation).
 
-## The task is the WMT17 multimodal (task 1)
-For more information refer to [this
-link](http://www.statmt.org/wmt17/multimodal-task.html)
 
+## Links to download the data
 
-For simplicity, French characters with accents were normalized to the letter
-only.
+For more information refer to [this link](http://www.statmt.org/wmt17/multimodal-task.html).
+
+**Text data**
+* [Train](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/mmt_task1_training.tar.gz)
+* [Valid](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/mmt_task1_validation.tar.gz)
+* [Test2016](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/mmt_task1_test2016.tar.gz)
+* [Test2017](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/source_flickr.task1)
+
+**Average pooled features from ResNet-50**
+* [Train](http://www-lium.univ-lemans.fr/sites/default/files/NMTPY/flickr30k_ResNet50_pool5_train.zip)
+* [Valid](http://www-lium.univ-lemans.fr/sites/default/files/NMTPY/flickr30k_ResNet50_pool5_val.zip)
+* [Test2016](http://www-lium.univ-lemans.fr/sites/default/files/NMTPY/flickr30k_ResNet50_pool5_test.zip)
+* [Test2017](http://www-lium.univ-lemans.fr/sites/default/files/NMTPY/test2017/task1_ResNet50_pool5_test2017.mat.zip)
+
 
 #### Processing of data
 Data is lowecased and tokenized, punctuation are considered as tokens. Only
 training data is used to build the vocabulary (from both source and target languages), while words not in vocabulary are replaced by the \<unk\> tag.
 
-Processed data is a tensor of the indices to word dictionary, arranged in the
-form [tokens, sentences] of size max\_tokens x nb\_sentences, where we pad the shorter sentences with \<eos\> tag (indice 0). we then have tuples for each train, valid and test datasets.
--> This is no longer true, will work on implementation 1 sentence at teh time
-and then optimize.
-
-
-### Model input
-The input to the encoder is a matrix of the tokens ID for each sequence
-(columns is the batch axis). The embedding layer of pytorch maps the ID to an
-embedding of the same dimensions as the hidden state.
 
 ### References
 
