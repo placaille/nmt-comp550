@@ -15,6 +15,9 @@ import model
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
+parser.add_argument('--path_to_word2vec', type=str,
+                    default='./GoogleNews-vectors-negative300.bin.gz',
+                    help='Path to pre-trained word2vec')
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
@@ -32,6 +35,8 @@ parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
+parser.add_argument('--use_word2vec', action='store_true',
+                    help='use pre-trained word2vec embeddings')
 parser.add_argument('--batch_size', type=int, default=100, metavar='N',
                     help='batch size')
 parser.add_argument('--bidirectional', action='store_true',
@@ -93,6 +98,14 @@ with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
 # Build the model
 ###############################################################################
 
+if args.use_word2vec:
+    if args.verbose:
+        print('Loading Word2Vec model..')
+
+    Word2Vec = utils.init_google_word2vec_model(args.path_to_word2vec)
+else:
+    Word2Vec = None
+
 if args.verbose:
     print('Building model..')
 
@@ -111,7 +124,7 @@ if args.verbose:
 
 
 lr = args.lr
-optimizer = torch.optim.Adam(list(encoder.parameters()) + \
+optimizer = torch.optim.Adam(list(encoder.parameters()) +
                              list(decoder.parameters()),
                              lr)
 
@@ -140,14 +153,13 @@ def train_epoch():
     # initialize minibatch generator
     minibatches = utils.minibatch_generator(args.batch_size,
                                             corpus.train,
-                                            args.cuda)
+                                            args.cuda,
+                                            word2vec=Word2Vec)
 
     upper_bd = 10 if args.debug else float('inf')
     for n_batch, batch in enumerate(minibatches):
 
-        loss, _, _ = utils.step(encoder, decoder, batch, optimizer, True, 
-                        args.cuda, args.max_length, args.clip, tf_p=args.teacher_force_prob)
-
+        loss, _, _ = utils.step(encoder, decoder, batch, optimizer, True, args)
         total_loss += loss
 
         if n_batch % args.log_interval == 0 and n_batch > 0:

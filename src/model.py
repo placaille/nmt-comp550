@@ -9,13 +9,21 @@ from torch.autograd import Variable
 
 def build_model(src_vocab_size, tgt_vocab_size, args):
 
-    encoder = EncoderRNN(args.model,
-                         src_vocab_size,
-                         args.nhid,
-                         args.emb_size,
-                         args.batch_size,
-                         args.nlayers,
-                         args.bidirectional)
+    if args.use_word2vec:
+        encoder = word2vecEncoderRNN(args.model,
+                                     src_vocab_size,
+                                     args.nhid,
+                                     args.batch_size,
+                                     args.nlayers,
+                                     args.bidirectional)
+    else:
+        encoder = EncoderRNN(args.model,
+                             src_vocab_size,
+                             args.nhid,
+                             args.emb_size,
+                             args.batch_size,
+                             args.nlayers,
+                             args.bidirectional)
 
     if encoder.bidirectional:
         dec_nhid = args.nhid * 2
@@ -82,6 +90,34 @@ class EncoderRNN(nn.Module):
         else:
             return Variable(weight.new(n, b, e).zero_())
 
+
+class word2vecEncoderRNN(EncoderRNN):
+    def __init__(self, rnn_type, input_size, hidden_size, batch_size,
+                 n_layers=2, bidirectional=False):
+        super(EncoderRNN, self).__init__()
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.embedding_size = 300
+        self.batch_size = batch_size
+        self.n_layers = n_layers
+        self.rnn_type = rnn_type
+        self.bidirectional = bidirectional
+
+        if rnn_type == 'GRU':
+            self.rnn = nn.GRU(300, hidden_size, n_layers,
+                              bidirectional=bidirectional)
+        elif rnn_type == 'LSTM':
+            self.rnn = nn.LSTM(300, hidden_size, n_layers,
+                               bidirectional=bidirectional)
+
+    def forward(self, embedding, hidden, input_lengths):
+        embedding_packed = pack_padded_sequence(embedding, input_lengths)
+
+        output, hidden = self.rnn(embedding_packed, hidden)
+        output, output_lengths = pad_packed_sequence(output)
+
+        return output, hidden
 
 class DecoderRNN(nn.Module):
     def __init__(self, rnn_type, hidden_size, embedding_size, output_size,

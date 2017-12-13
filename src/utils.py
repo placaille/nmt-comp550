@@ -1,6 +1,5 @@
 # coding: utf-8
 from __future__ import division
-import numpy as np
 import pdb
 import random
 import os
@@ -11,12 +10,12 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from torch.autograd import Variable
 from torch.nn import functional
-from gensim.models.KeyedVectors import load_word2vec_format  # embeddings
+from gensim.models import KeyedVectors  # used for embeddings
 
 from beam_wrapper import *
 
 
-def init_google_word2vec_model(args):
+def init_google_word2vec_model(path_to_word2vec):
     """
     Loads the 3Mx300 matrix and returns it as a numpy array
 
@@ -28,14 +27,8 @@ def init_google_word2vec_model(args):
     >>> (2, 300)
     """
 
-    model_name = 'GoogleNews-vectors-negative300.bin.gz'
-    full_path = os.path.join(args.path_to_word2vec, model_name)
-    assert os.path.exists(full_path)
-
-    if args.verbose:
-        print('Loading Word2Vec model..')
-
-    model = load_word2vec_format(full_path, binary=True)
+    assert os.path.exists(path_to_word2vec)
+    model = KeyedVectors.load_word2vec_format(path_to_word2vec, binary=True)
 
     return model
 
@@ -94,9 +87,8 @@ def masked_cross_entropy(logits, target, length):
     return loss
 
 
-def step(encoder, decoder, batch, optimizer,
-         train=True, cuda=True, max_length=50, clip=0, tf_p=0.,
-         beam_size=0):
+def step(encoder, decoder, batch, optimizer, train=True, args=None,
+         word2vec=None, beam_size=0):
 
     PAD_token = 0
     SOS_token = 2
@@ -117,7 +109,8 @@ def step(encoder, decoder, batch, optimizer,
 
     if train:
         optimizer.zero_grad()
-        use_teacher_forcing = True if np.random.random() < tf_p else False
+        if random.random() < args.teacher_force_prob:
+            use_teacher_forcing = True
 
     enc_h0 = encoder.init_hidden(b_size)
 
@@ -153,8 +146,8 @@ def step(encoder, decoder, batch, optimizer,
     # decode by looping time steps
     if beam_size:
 
-        beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
-                                  beam_size, cuda, enc_out)
+        beam_searcher = BSWrapper(decoder, dec_hid, b_size, args.max_length,
+                                  beam_size, args.cuda, enc_out)
 
         preds = torch.LongTensor(beam_searcher.decode())
 
@@ -190,9 +183,9 @@ def step(encoder, decoder, batch, optimizer,
         # update params
         if train:
             loss.backward()
-            if clip:
-                nn.utils.clip_grad_norm(encoder.parameters(), clip)
-                nn.utils.clip_grad_norm(decoder.parameters(), clip)
+            if args.clip:
+                nn.utils.clip_grad_norm(encoder.parameters(), args.clip)
+                nn.utils.clip_grad_norm(decoder.parameters(), args.clip)
             optimizer.step()
 
     return loss.data[0], preds, decoder_attentions
@@ -203,7 +196,7 @@ def set_gradient(model, value):
         p.requires_grad = value
 
 
-def minibatch_generator(size, dataset, cuda, shuffle=True):
+def minibatch_generator(size, dataset, cuda, word2vec=None, shuffle=True):
     """
     Generator used to feed the minibatches
     """
@@ -256,6 +249,10 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         batch_src = Variable(torch.LongTensor(b_src_s).t())
         batch_tgt = Variable(torch.LongTensor(b_tgt_s).t())
 
+        #TODO:
+        # make batch_src be the embedding directly if using word2vec
+        # batch_src should be of size (batch_size, seq, 300) when returned)
+
         if cuda:
             batch_src = batch_src.cuda()
             batch_tgt = batch_tgt.cuda()
@@ -271,7 +268,8 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         '''
         yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
-def evaluate(dataset, encoder, decoder, args, corpus=None):
+
+def evaluate(dataset, encoder, decoder, args, corpus=None, word2vec=None):
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
     decoder.eval()
@@ -291,8 +289,7 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
     for n_batch, batch in enumerate(minibatches):
 
         loss, dec_outs, attn = step(encoder, decoder, batch, optimizer=None,
-                                    train=False, cuda=args.cuda,
-                                    max_length=args.max_length)
+                                    train=False, args=args, word2vec=word2vec)
 
         total_loss += loss
         iters += 1
