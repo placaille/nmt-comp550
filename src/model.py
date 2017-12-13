@@ -9,23 +9,26 @@ from torch.autograd import Variable
 
 def build_model(src_vocab_size, tgt_vocab_size, args):
 
+
+    if args.bidirectional:
+        dec_nhid = args.nhid * 2
+    else:
+        dec_nhid = args.nhid
+    
     encoder = EncoderRNN(args.model,
                          src_vocab_size,
                          args.nhid,
                          args.emb_size,
                          args.batch_size,
                          args.nlayers,
-                         args.bidirectional)
-
-    if encoder.bidirectional:
-        dec_nhid = args.nhid * 2
-    else:
-        dec_nhid = args.nhid
+                         args.bidirectional, 
+                         img_conditioning=args.img_conditioning) 
 
     if args.use_attention:
         decoder = Luong_Decoder(args.model,
                                 dec_nhid,
                                 tgt_vocab_size,
+                                args.emb_size, 
                                 args.batch_size,
                                 n_layers=args.nlayers,
                                 dropout_p=args.dropout)
@@ -43,7 +46,7 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
 
 class EncoderRNN(nn.Module):
     def __init__(self, rnn_type, input_size, hidden_size, embedding_size, batch_size,
-                 n_layers=2, bidirectional=False):
+                 n_layers=2, bidirectional=False, img_conditioning=0):
         super(EncoderRNN, self).__init__()
 
         self.input_size = input_size
@@ -61,6 +64,12 @@ class EncoderRNN(nn.Module):
         elif rnn_type == 'LSTM':
             self.rnn = nn.LSTM(embedding_size, hidden_size, n_layers,
                                bidirectional=bidirectional)
+
+        if img_conditioning == 1: 
+            dec_dim = hidden_size * 2 if bidirectional else hidden_size
+            self.img_cond = nn.Linear(2048 + dec_dim, dec_dim)
+        elif img_conditioning > 1: 
+            raise Exception('conditioning mode {} not currently supported'.format(img_conditioning))
 
     def forward(self, input, hidden, input_lengths):
         embedding = self.embedding(input)
@@ -163,7 +172,7 @@ class Luong_Attention(nn.Module):
 
 
 class Luong_Decoder(nn.Module):
-    def __init__(self, rnn_type, hidden_size, output_size, batch_size, 
+    def __init__(self, rnn_type, hidden_size, output_size, embedding_size, batch_size, 
                  max_length=50, n_layers=2, dropout_p=0.1):
         super(Luong_Decoder, self).__init__()
 
@@ -176,16 +185,16 @@ class Luong_Decoder(nn.Module):
         self.use_attention = True
         wn = lambda x : nn.utils.weight_norm(x)
 
-        self.embedding    = nn.Embedding(output_size, hidden_size)
+        self.embedding    = nn.Embedding(output_size, embedding_size)
         self.attn         = Luong_Attention(hidden_size)
         self.dropout      = nn.Dropout(dropout_p)
         self.out          = wn(nn.Linear(hidden_size, output_size))
         self.concat       = wn(nn.Linear(hidden_size*2, hidden_size))
 
         if rnn_type == 'GRU':
-            self.rnn = nn.GRU(hidden_size, hidden_size, n_layers)
+            self.rnn = nn.GRU(embedding_size, hidden_size, n_layers)
         elif rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
+            self.rnn = nn.LSTM(embedding_size, hidden_size, n_layers)
 
     def forward(self, input, hidden, encoder_outputs):
         embedded = self.embedding(input).view(1, input.size(0), -1)

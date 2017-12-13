@@ -15,8 +15,9 @@ import model
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
-parser.add_argument('--load_img_feat', action='store_true',
-                    help='load average pooled features for images')
+parser.add_argument('--img_conditioning', type=int, default=0, 
+                    choices=[0, 1], 
+                    help='0: no conditioning, 1: h_T_enc/h_0_dec conditioning')
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
@@ -85,7 +86,7 @@ if torch.cuda.is_available():
 
 if args.verbose:
     print('Processing data..')
-corpus = data.Corpus(args.data, args.lang, load_img_feat=args.load_img_feat)
+corpus = data.Corpus(args.data, args.lang, load_img_feat=(args.img_conditioning != 0))
 
 # save the dictionary for generation
 with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
@@ -148,7 +149,8 @@ def train_epoch():
     for n_batch, batch in enumerate(minibatches):
 
         loss, _, _ = utils.step(encoder, decoder, batch, optimizer, True, 
-                        args.cuda, args.max_length, args.clip, tf_p=args.teacher_force_prob)
+                        args.cuda, args.max_length, args.clip, tf_p=args.teacher_force_prob, 
+                        img_conditioning=args.img_conditioning)
 
         total_loss += loss
 
