@@ -66,7 +66,7 @@ class Corpus(object):
 
     def tokenize(self, path, src_tgt, train=False):
         """Tokenizes a text file."""
-        assert os.path.exists(path)
+        assert os.path.exists(path), '{} does not exist'.format(path)
         # Add words to the dictionary
         with open(path, 'r') as f:
             sentences = 0

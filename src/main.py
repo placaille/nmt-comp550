@@ -59,7 +59,7 @@ parser.add_argument('--save', type=str,  default='model.pt',
 parser.add_argument('--debug', action='store_true',
                     help='reduce training set size to debug')
 parser.add_argument('--lang', type=str,  default='en-fr',
-                    choices=['en-fr'],
+                    choices=['en-fr', 'en-de'],
                     help='in-out languages')
 parser.add_argument('--verbose', action='store_true',
                     help='verbose flag')
