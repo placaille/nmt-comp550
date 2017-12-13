@@ -9,7 +9,6 @@ from torch.autograd import Variable
 
 def build_model(src_vocab_size, tgt_vocab_size, args):
 
-
     if args.bidirectional:
         dec_nhid = args.nhid * 2
     else:
