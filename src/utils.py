@@ -11,8 +11,33 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from torch.autograd import Variable
 from torch.nn import functional
+from gensim.models.KeyedVectors import load_word2vec_format  # embeddings
 
 from beam_wrapper import *
+
+
+def init_google_word2vec_model(args):
+    """
+    Loads the 3Mx300 matrix and returns it as a numpy array
+
+    To load the model:
+    model = gensim.models.KeyedVectors.load_word2vec_format(path, binary=True)
+
+    To generate the embeddings the model:
+    model['test sentence'.split()].shape
+    >>> (2, 300)
+    """
+
+    model_name = 'GoogleNews-vectors-negative300.bin.gz'
+    full_path = os.path.join(args.path_to_word2vec, model_name)
+    assert os.path.exists(full_path)
+
+    if args.verbose:
+        print('Loading Word2Vec model..')
+
+    model = load_word2vec_format(full_path, binary=True)
+
+    return model
 
 
 def sequence_mask(sequence_length, max_len=None):
