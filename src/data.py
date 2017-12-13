@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
 import pdb
+import h5py
+import numpy as np
 import re
 import torch
 import pickle as pkl
@@ -29,7 +31,7 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, path, lang, reverse_src=False):
+    def __init__(self, path, lang, reverse_src=False, load_img_feat=False):
 
         path = os.path.join(path, lang)
 
@@ -53,16 +55,35 @@ class Corpus(object):
             'test2017.{}'.format(lang_src)), 'src', False)
         test2017_tgt = self.tokenize(os.path.join(path,
             'test2017.{}'.format(lang_tgt)), 'tgt', False)
+        
+        if load_img_feat:
+            path_to_feat = os.path.join(path, '../image_features')
+            path_train = os.path.join(path_to_feat, 'flickr30k_ResNet50_pool5_train.mat')
+            path_val = os.path.join(path_to_feat, 'flickr30k_ResNet50_pool5_val.mat')
+            path_test_16 = os.path.join(path_to_feat, 'flickr30k_ResNet50_pool5_test.mat')
+            path_test_17 = os.path.join(path_to_feat, 'task1_ResNet50_pool5_test2017.mat')
+            train_img_feat = self.load_img_features(path_train)
+            
+            val_img_feat = self.load_img_features(path_val)
+            test_16_img_feat = self.load_img_features(path_test_16)
+            test_17_img_feat = self.load_img_features(path_test_17)
 
-        self.train = (train_src, train_tgt)
-        self.valid = (valid_src, valid_tgt)
-        self.test2016 = (test2016_src, test2016_tgt)
-        self.test2017 = (test2017_src, test2017_tgt)
+            self.train = (train_src, train_tgt, train_img_feat)
+            self.valid = (valid_src, valid_tgt, val_img_feat)
+            self.test2016 = (test2016_src, test2016_tgt, test_16_img_feat)
+            self.test2017 = (test2017_src, test2017_tgt, test_17_img_feat)
+        
+        else : 
+            self.train = (train_src, train_tgt)
+            self.valid = (valid_src, valid_tgt)
+            self.test2016 = (test2016_src, test2016_tgt)
+            self.test2017 = (test2017_src, test2017_tgt)
 
         self.n_sent_train = len(train_src)
         self.n_sent_valid = len(valid_src)
         self.n_sent_test2016 = len(test2016_src)
         self.n_sent_test2017 = len(test2017_src)
+
 
     def tokenize(self, path, src_tgt, train=False):
         """Tokenizes a text file."""
@@ -113,6 +134,12 @@ class Corpus(object):
                 ids.append(idx)
 
         return ids
+
+    def load_img_features(self, path):
+        f = h5py.File(path, 'r')
+        data = np.array(f.items()[0][1])
+        return data
+
 
 
 class GenerationCorpus(Corpus):

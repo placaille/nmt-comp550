@@ -15,6 +15,8 @@ import model
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
+parser.add_argument('--load_img_feat', action='store_true',
+                    help='load average pooled features for images')
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
@@ -83,7 +85,7 @@ if torch.cuda.is_available():
 
 if args.verbose:
     print('Processing data..')
-corpus = data.Corpus(args.data, args.lang)
+corpus = data.Corpus(args.data, args.lang, load_img_feat=args.load_img_feat)
 
 # save the dictionary for generation
 with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:

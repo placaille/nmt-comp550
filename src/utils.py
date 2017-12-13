@@ -71,12 +71,15 @@ def masked_cross_entropy(logits, target, length):
 
 def step(encoder, decoder, batch, optimizer,
          train=True, cuda=True, max_length=50, clip=0, tf_p=0.,
-         beam_size=0):
+         beam_size=0, use_img_feat=False):
 
     PAD_token = 0
     SOS_token = 2
 
-    batch_src, batch_tgt, len_src, len_tgt = batch
+    if len(batch) == 5: 
+        batch_src, batch_tgt, len_src, len_tgt, img_feat = batch
+    else: 
+        batch_src, batch_tgt, len_src, len_tgt = batch
 
     max_src = batch_src.size(0)
     max_tgt = batch_tgt.size(0)
@@ -189,7 +192,13 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         input_padded += [fill_token] * (padded_length - len(input))
         return input_padded
 
-    src, tgt = dataset
+    if len(dataset) == 2: 
+        src, tgt = dataset
+        use_feat = False
+    else:
+        src, tgt, img_feat = dataset
+        assert len(src) == len(tgt) == img_feat.shape[0], pdb.set_trace()
+        use_feat = True
 
     nb_elem = len(src)
     indices = range(nb_elem)
@@ -201,6 +210,7 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         b_tgt = []
         len_src = []
         len_tgt = []
+        b_feat = []
 
         count = 0
         while count < size and nb_elem > 0:
@@ -212,6 +222,7 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
             b_tgt.append(tgt[ind])
             len_src.append(len(src[ind]))
             len_tgt.append(len(tgt[ind]))
+            if use_feat: b_feat.append(img_feat[ind])
 
         # we need to fill shorter sentences to make tensor
         max_src = max(len_src)
@@ -220,31 +231,39 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
         b_tgt_ = [fill_seq(seq, max_tgt, PAD_token) for seq in b_tgt]
 
         # sort the lists by len_src for pack_padded_sentence later
-        b_sorted = [(x,y,ls,lt) for (x,y,ls,lt) in \
+        if use_feat: 
+            b_sorted = [(x,y,ls,lt,ft) for (x,y,ls,lt,ft) in \
+                           sorted(zip(b_src_, b_tgt_, len_src, len_tgt, b_feat),
+                                  key=lambda v: v[2],  # using len_src
+                                  reverse=True)]  # descending order
+
+            # unzip to individual lists
+            b_src_s, b_tgt_s, len_src_s, len_tgt_s, b_feat = zip(*b_sorted)
+            
+        else :
+            b_sorted = [(x,y,ls,lt) for (x,y,ls,lt) in \
                        sorted(zip(b_src_, b_tgt_, len_src, len_tgt),
                               key=lambda v: v[2],  # using len_src
                               reverse=True)]  # descending order
-        # unzip to individual lists
-        b_src_s, b_tgt_s, len_src_s, len_tgt_s = zip(*b_sorted)
+
+            # unzip to individual lists
+            b_src_s, b_tgt_s, len_src_s, len_tgt_s = zip(*b_sorted)
 
         # create pytorch variable, transpose to have (seq, batch)
         batch_src = Variable(torch.LongTensor(b_src_s).t())
         batch_tgt = Variable(torch.LongTensor(b_tgt_s).t())
+        if use_feat: batch_feat = Variable(torch.FloatTensor(list(b_feat)))
 
         if cuda:
             batch_src = batch_src.cuda()
             batch_tgt = batch_tgt.cuda()
+            if use_feat: batch_feat = batch_feat.cuda()
+    
+        if use_feat:
+            yield batch_src, batch_tgt, len_src_s, len_tgt_s, batch_feat
+        else: 
+            yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
-        '''
-        Simple test to see if attention mechanism is working
-        ind = torch.arange(batch_src.size(0) - 1, -1, -1).long()
-        ind = ind.cuda() if cuda else ind
-        batch_tgt = batch_src[ind]
-        len_tgt_s = len_src_s[::-1]
-        # import pdb; pdb.set_trace()
-        yield batch_src, batch_src, len_src_s, len_src_s
-        '''
-        yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
 def evaluate(dataset, encoder, decoder, args, corpus=None):
     # Turn on evaluation mode which disables dropout.
