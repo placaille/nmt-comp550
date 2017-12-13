@@ -15,11 +15,18 @@ repo](https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation)
 
 For more information refer to [this link](http://www.statmt.org/wmt17/multimodal-task.html).
 
+The gold predictions for the task can be [found
+here](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/gold_translations_task1.tar.gz).
+However, these are already normalized, tokenized and lower cased. Furthermore,
+for French, the apostrophe character was replaced by the string "\&apos; ". As
+they are our only version of the French 2017 test, we manually modified these
+strings to make them like true characters that a French model should predict.
+
 **Text data**
 * [Train](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/mmt_task1_training.tar.gz)
 * [Valid](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/mmt_task1_validation.tar.gz)
 * [Test2016](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/mmt_task1_test2016.tar.gz)
-* [Test2017](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/source_flickr.task1)
+* [Test2017 (english)](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/source_flickr.task1)
 
 **Average pooled features from ResNet-50**
 * [Train](http://www-lium.univ-lemans.fr/sites/default/files/NMTPY/flickr30k_ResNet50_pool5_train.zip)
@@ -39,11 +46,6 @@ One of the first if not the first seq2seq learning, they talk about the
 necessity of doing beam search. See *Decoding and Rescoring* [link to
 paper](https://arxiv.org/pdf/1409.3215v1.pdf%3B)
 
-Other paper about beam search strategies [link to
-paper](https://arxiv.org/pdf/1702.01806.pdf)
-
 Beam search implementation from [this repo](
-https://github.com/GuessWhatGame/guesswhat/blob/master/src/guesswhat/models/qgen/qgen_beamsearch_wrapper.py)
-
-Highly inspired but was modified to fit our needs and model
+https://github.com/GuessWhatGame/guesswhat/blob/master/src/guesswhat/models/qgen/qgen_beamsearch_wrapper.py) was highly inspired but was modified to fit our needs and model.
 
