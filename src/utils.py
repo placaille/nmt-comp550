@@ -297,7 +297,8 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
 
         loss, dec_outs, attn = step(encoder, decoder, batch, optimizer=None,
                                     train=False, cuda=args.cuda,
-                                    max_length=args.max_length)
+                                    max_length=args.max_length, 
+                                    img_conditioning=args.img_conditioning)
 
         total_loss += loss
         iters += 1
