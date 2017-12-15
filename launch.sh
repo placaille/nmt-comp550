@@ -37,4 +37,5 @@ python $python_script \
 	--clip 1.0 \
 	--dropout 0.3 \
 	--teacher_force_prob 0.3 \
-	--use_word_emb
+	--use_word_emb \
+	--train_word_emb none

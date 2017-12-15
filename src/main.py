@@ -37,6 +37,9 @@ parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
 parser.add_argument('--use_word_emb', action='store_true',
                     help='use pre-trained word embeddings')
+parser.add_argument('--train_word_emb', type=str,
+                    choices=['full', 'partial', 'none'],
+                    help='type of training for pre-trained word embeddings')
 parser.add_argument('--batch_size', type=int, default=100, metavar='N',
                     help='batch size')
 parser.add_argument('--bidirectional', action='store_true',
@@ -118,6 +121,13 @@ if args.use_word_emb:
 
     pretrained_emb = torch.load(args.path_emb)
     encoder.embedding.weight.data.copy_ = pretrained_emb
+
+    if args.train_word_emb == 'none':
+        encoder.embedding.requires_grad = False
+    elif args.train_word_emb == 'full':
+        pass  # default is trainable
+    elif args.train_word_emb == 'partial':
+        raise 'Partial training is not yet implemented'
 
 if args.cuda:
     encoder.cuda()
