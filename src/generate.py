@@ -30,7 +30,7 @@ parser.add_argument('--log-interval', type=int, default=20, metavar='N',
 parser.add_argument('--beam_size', type=int, default=5, metavar='N',
                     help='width of beam search during generation')
 parser.add_argument('--lang', type=str,  default='en-fr',
-                    choices=['en-fr'],
+                    choices=['en-fr', 'en-de'],
                     help='in-out languages')
 parser.add_argument('--verbose', action='store_true',
                     help='verbose flag')

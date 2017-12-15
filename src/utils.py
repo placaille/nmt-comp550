@@ -1,6 +1,5 @@
 # coding: utf-8
 from __future__ import division
-import numpy as np
 import pdb
 import random
 import os
@@ -11,8 +10,49 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from torch.autograd import Variable
 from torch.nn import functional
+from gensim.models import KeyedVectors  # used for embeddings
 
 from beam_wrapper import *
+
+
+def init_google_word2vec_model(path_word2vec):
+    """
+    Loads the 3Mx300 matrix and returns it as a numpy array
+
+    To load the model:
+    model = gensim.models.KeyedVectors.load_word2vec_format(path, binary=True)
+
+    To generate the embeddings the model:
+    model['test sentence'.split()].shape
+    >>> (2, 300)
+    """
+    assert os.path.exists(path_word2vec)
+
+    model = KeyedVectors.load_word2vec_format(path_word2vec, binary=True)
+    return model
+
+
+def create_pretrained_emb_params(encoder, word2vec, vocab):
+
+    params = encoder.embedding.weight.data.numpy()
+    for tok_id in xrange(len(vocab)):
+        try:
+            emb = word2vec[vocab.idx2word[tok_id]]
+        except KeyError, e:
+            pass
+        else:
+            params[tok_id] = emb
+
+    encoder.embedding.weight.data = torch.from_numpy(params)
+
+    return encoder
+
+
+def dump_embedding_layer(encoder, args):
+    emb_layer = encoder.model_dict()['embedding.weight']
+
+    dump_path = os.path.join(args.save, '../../embeddlayer.bin')
+    torch.save(emb_layer, dump_path)
 
 
 def sequence_mask(sequence_length, max_len=None):
@@ -68,11 +108,8 @@ def masked_cross_entropy(logits, target, length):
     loss = losses.sum() / length.float().sum()
     return loss
 
-
-def step(encoder, decoder, batch, optimizer,
-         train=True, cuda=True, max_length=50, clip=0, tf_p=0.,
-         beam_size=0, img_conditioning=0):
-
+def step(encoder, decoder, batch, optimizer, train=True, args=None):
+  
     PAD_token = 0
     SOS_token = 2
 
@@ -95,7 +132,8 @@ def step(encoder, decoder, batch, optimizer,
 
     if train:
         optimizer.zero_grad()
-        use_teacher_forcing = True if np.random.random() < tf_p else False
+        if random.random() < args.teacher_force_prob:
+            use_teacher_forcing = True
 
     enc_h0 = encoder.init_hidden(b_size)
 
@@ -114,8 +152,7 @@ def step(encoder, decoder, batch, optimizer,
     else:
         dec_hid = context
 
-    dec_hid_old = dec_hid
-    if img_conditioning == 1:
+    if args.img_conditioning == 1:
         # the decoder hidden state is a fct of h_enc_T and the image features
         # for an LSTM, we apply it to the c_T = dec_hid[1]
         if type(dec_hid) is tuple: 
@@ -149,16 +186,16 @@ def step(encoder, decoder, batch, optimizer,
 
     decoder_attentions = torch.zeros(b_size, max_src, max_tgt)
 
-    if cuda:
+    if args.cuda:
         dec_input = dec_input.cuda()
         dec_outs = dec_outs.cuda()
         preds = preds.cuda()
 
     # decode by looping time steps
-    if beam_size:
+    if args.beam_size:
 
-        beam_searcher = BSWrapper(decoder, dec_hid, b_size, max_length,
-                                  beam_size, cuda, enc_out)
+        beam_searcher = BSWrapper(decoder, dec_hid, b_size, args.max_length,
+                                  args.beam_size, args.cuda, enc_out)
 
         preds = torch.LongTensor(beam_searcher.decode())
 
@@ -194,9 +231,9 @@ def step(encoder, decoder, batch, optimizer,
         # update params
         if train:
             loss.backward()
-            if clip:
-                nn.utils.clip_grad_norm(encoder.parameters(), clip)
-                nn.utils.clip_grad_norm(decoder.parameters(), clip)
+            if args.clip:
+                nn.utils.clip_grad_norm(encoder.parameters(), args.clip)
+                nn.utils.clip_grad_norm(decoder.parameters(), args.clip)
             optimizer.step()
 
     return loss.data[0], preds, decoder_attentions
@@ -250,9 +287,10 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
             len_tgt.append(len(tgt[ind]))
             if use_feat: b_feat.append(img_feat[ind])
 
-        # we need to fill shorter sentences to make tensor
         max_src = max(len_src)
         max_tgt = max(len_tgt)
+
+        # we need to fill shorter sentences to make tensor
         b_src_ = [fill_seq(seq, max_src, PAD_token) for seq in b_src]
         b_tgt_ = [fill_seq(seq, max_tgt, PAD_token) for seq in b_tgt]
 
@@ -291,6 +329,7 @@ def minibatch_generator(size, dataset, cuda, shuffle=True):
             yield batch_src, batch_tgt, len_src_s, len_tgt_s
 
 
+
 def evaluate(dataset, encoder, decoder, args, corpus=None):
     # Turn on evaluation mode which disables dropout.
     encoder.eval()
@@ -311,10 +350,7 @@ def evaluate(dataset, encoder, decoder, args, corpus=None):
     for n_batch, batch in enumerate(minibatches):
 
         loss, dec_outs, attn = step(encoder, decoder, batch, optimizer=None,
-                                    train=False, cuda=args.cuda,
-                                    max_length=args.max_length, 
-                                    img_conditioning=args.img_conditioning)
-
+                                    train=False, args=args)
         total_loss += loss
         iters += 1
 
