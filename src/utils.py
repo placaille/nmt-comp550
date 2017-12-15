@@ -32,15 +32,27 @@ def init_google_word2vec_model(path_word2vec):
     return model
 
 
-def update_pretrained_emb_params(encoder, word2vec):
+def create_pretrained_emb_params(encoder, word2vec, vocab):
 
-    #TODO
-    # for the words of corpus in the pre-trained mebeddings
-    # change the embedding layer params to the pre-trained weights
+    params = encoder.embedding.weight.data.numpy()
+    for tok_id in xrange(len(vocab)):
+        try:
+            emb = word2vec[vocab.idx2word[tok_id]]
+        except KeyError, e:
+            pass
+        else:
+            params[tok_id] = emb
+
+    encoder.embedding.weight.data = torch.from_numpy(params)
+
+    return encoder
 
 
+def dump_embedding_layer(encoder, args):
+    emb_layer = encoder.model_dict()['embedding.weight']
 
-    pass
+    dump_path = os.path.join(args.save, '../../embeddlayer.bin')
+    torch.save(emb_layer, dump_path)
 
 
 def sequence_mask(sequence_length, max_len=None):
@@ -148,7 +160,7 @@ def step(encoder, decoder, batch, optimizer, train=True, args=None,
 
     decoder_attentions = torch.zeros(b_size, max_src, max_tgt)
 
-    if cuda:
+    if args.cuda:
         dec_input = dec_input.cuda()
         dec_outs = dec_outs.cuda()
         preds = preds.cuda()

@@ -15,9 +15,9 @@ import model
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
-parser.add_argument('--path_word_emb', type=str,
-                    default='./word_embeddings',
-                    help='Path with pre-trained word_embeddings')
+parser.add_argument('--path_emb', type=str,
+                    default='./bin/*',
+                    help='Path to pre-trained embedding layer')
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
@@ -70,6 +70,12 @@ parser.add_argument('--verbose', action='store_true',
                     help='verbose flag')
 args = parser.parse_args()
 
+# ensure embedding size of model is 300 for word embeddings
+if args.use_word_emb:
+    if args.emb_size != 300:
+        print('Embedding size must be 300, changing it to 300')
+        args.emb_size = 300
+
 # save args
 with open(os.path.join(args.save, '../args.info'), 'wb') as f:
     pkl.dump(args, f)
@@ -86,17 +92,9 @@ if torch.cuda.is_available():
 # Load data
 ###############################################################################
 
-if args.use_word_emb:
-    if args.verbose:
-        print('Loading Word2Vec model..')
-
-    Word2Vec = utils.init_google_word2vec_model(args.path_word_emb)
-else:
-    Word2Vec = None
-
 if args.verbose:
     print('Processing data..')
-corpus = data.Corpus(args.data, args.lang, word_emb=Word2Vec)
+corpus = data.Corpus(args.data, args.lang)
 
 # save the dictionary for generation
 with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
@@ -113,6 +111,13 @@ if args.verbose:
 encoder, decoder = model.build_model(len(corpus.dictionary['src']),
                                      len(corpus.dictionary['tgt']),
                                      args=args)
+
+if args.use_word_emb:
+    if args.verbose:
+        print('Loading pre-trained Word2Vec embedding layer..')
+
+    pretrained_emb = torch.load(args.path_emb)
+    encoder.embedding.weight.data.copy_ = pretrained_emb
 
 if args.cuda:
     encoder.cuda()
@@ -154,8 +159,6 @@ def train_epoch():
     minibatches = utils.minibatch_generator(args.batch_size,
                                             corpus.train,
                                             args.cuda,
-                                            word2vec=Word2Vec,
-                                            vocab=corpus.dictionary['src'],
                                             shuffle=True)
 
     upper_bd = 10 if args.debug else float('inf')
