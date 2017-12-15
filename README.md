@@ -40,6 +40,25 @@ Data is lowecased and tokenized, punctuation are considered as tokens. Only
 training data is used to build the vocabulary (from both source and target languages), while words not in vocabulary are replaced by the \<unk\> tag.
 
 
+## Pre-trained word embeddings
+
+Multiple pre-trained word embeddings model can be used. Here are a couple
+options.
+
+* Google's word2vec model, more information can be
+found [at this link](https://code.google.com/archive/p/word2vec/). Direct
+download of the matrix for the 3 million words can be done with this [direct
+link](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit?usp=sharing).
+
+* Stanford's GloVe model, more information can
+be found [at this link](https://nlp.stanford.edu/projects/glove/). Direct
+download of pre-trained model (42B tokens, 1.9M vocab, uncased, 300d vectors)
+can be done with this [direct
+link](http://nlp.stanford.edu/data/wordvecs/glove.42B.300d.zip).
+
+To use it in python, we will be using the `gensim` package. Refer to [this
+function](https://github.com/placaille/nmt-comp550/blob/master/src/utils.py#L19) in our code for detailed usage of the pre-trained model.
+
 ### References
 
 One of the first if not the first seq2seq learning, they talk about the

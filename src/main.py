@@ -15,6 +15,9 @@ import model
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
+parser.add_argument('--path_emb', type=str,
+                    default='./bin/*',
+                    help='Path to pre-trained embedding layer')
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
@@ -32,6 +35,11 @@ parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
+parser.add_argument('--use_word_emb', action='store_true',
+                    help='use pre-trained word embeddings')
+parser.add_argument('--train_word_emb', type=str,
+                    choices=['full', 'partial', 'none'],
+                    help='type of training for pre-trained word embeddings')
 parser.add_argument('--batch_size', type=int, default=100, metavar='N',
                     help='batch size')
 parser.add_argument('--bidirectional', action='store_true',
@@ -64,6 +72,12 @@ parser.add_argument('--lang', type=str,  default='en-fr',
 parser.add_argument('--verbose', action='store_true',
                     help='verbose flag')
 args = parser.parse_args()
+
+# ensure embedding size of model is 300 for word embeddings
+if args.use_word_emb:
+    if args.emb_size != 300:
+        print('Embedding size must be 300, changing it to 300')
+        args.emb_size = 300
 
 # save args
 with open(os.path.join(args.save, '../args.info'), 'wb') as f:
@@ -101,6 +115,20 @@ encoder, decoder = model.build_model(len(corpus.dictionary['src']),
                                      len(corpus.dictionary['tgt']),
                                      args=args)
 
+if args.use_word_emb:
+    if args.verbose:
+        print('Loading pre-trained Word2Vec embedding layer..')
+
+    pretrained_emb = torch.load(args.path_emb)
+    encoder.embedding.weight.data.copy_ = pretrained_emb
+
+    if args.train_word_emb == 'none':
+        encoder.embedding.requires_grad = False
+    elif args.train_word_emb == 'full':
+        pass  # default is trainable
+    elif args.train_word_emb == 'partial':
+        raise 'Partial training is not yet implemented'
+
 if args.cuda:
     encoder.cuda()
     decoder.cuda()
@@ -111,7 +139,7 @@ if args.verbose:
 
 
 lr = args.lr
-optimizer = torch.optim.Adam(list(encoder.parameters()) + \
+optimizer = torch.optim.Adam(list(encoder.parameters()) +
                              list(decoder.parameters()),
                              lr)
 
@@ -140,14 +168,13 @@ def train_epoch():
     # initialize minibatch generator
     minibatches = utils.minibatch_generator(args.batch_size,
                                             corpus.train,
-                                            args.cuda)
+                                            args.cuda,
+                                            shuffle=True)
 
     upper_bd = 10 if args.debug else float('inf')
     for n_batch, batch in enumerate(minibatches):
 
-        loss, _, _ = utils.step(encoder, decoder, batch, optimizer, True, 
-                        args.cuda, args.max_length, args.clip, tf_p=args.teacher_force_prob)
-
+        loss, _, _ = utils.step(encoder, decoder, batch, optimizer, True, args)
         total_loss += loss
 
         if n_batch % args.log_interval == 0 and n_batch > 0:
