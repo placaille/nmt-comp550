@@ -59,7 +59,21 @@ link](http://nlp.stanford.edu/data/wordvecs/glove.42B.300d.zip).
 To use it in python, we will be using the `gensim` package. Refer to [this
 function](https://github.com/placaille/nmt-comp550/blob/master/src/utils.py#L19) in our code for detailed usage of the pre-trained model.
 
-### References
+### Creating pre-trained embedding layer
+
+For simplicity and speed, we loaded only once the full word2vec model and
+replaced our embedding layer parameters with the pre-trained embeddings. For
+tokens from the corpus not in the word2vec dictionary, we kept the randomly
+initialized embedding parameters. The pre-trained layer can be found at [this
+link](https://github.com/placaille/nmt-comp550/blob/master/bin/pre-trained_emb_layer.bin)
+in the repo.
+
+Therefore, unkown tokens have an embedding that is unique to them and doesn't
+change. The pre-trained embedding layer can be loaded with the arg
+`--use_word_emb` and training can be resumed with `--train_word_emb {full,
+none, partial}` though partial training is not yet supported.
+
+## References
 
 One of the first if not the first seq2seq learning, they talk about the
 necessity of doing beam search. See *Decoding and Rescoring* [link to
