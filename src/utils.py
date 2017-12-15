@@ -15,7 +15,7 @@ from gensim.models import KeyedVectors  # used for embeddings
 from beam_wrapper import *
 
 
-def init_google_word2vec_model(path_to_word2vec):
+def init_google_word2vec_model(path_word2vec):
     """
     Loads the 3Mx300 matrix and returns it as a numpy array
 
@@ -26,11 +26,21 @@ def init_google_word2vec_model(path_to_word2vec):
     model['test sentence'.split()].shape
     >>> (2, 300)
     """
+    assert os.path.exists(path_word2vec)
 
-    assert os.path.exists(path_to_word2vec)
-    model = KeyedVectors.load_word2vec_format(path_to_word2vec, binary=True)
-
+    model = KeyedVectors.load_word2vec_format(path_word2vec, binary=True)
     return model
+
+
+def update_pretrained_emb_params(encoder, word2vec):
+
+    #TODO
+    # for the words of corpus in the pre-trained mebeddings
+    # change the embedding layer params to the pre-trained weights
+
+
+
+    pass
 
 
 def sequence_mask(sequence_length, max_len=None):
@@ -196,7 +206,7 @@ def set_gradient(model, value):
         p.requires_grad = value
 
 
-def minibatch_generator(size, dataset, cuda, word2vec=None, shuffle=True):
+def minibatch_generator(size, dataset, cuda, shuffle=True):
     """
     Generator used to feed the minibatches
     """
@@ -231,9 +241,10 @@ def minibatch_generator(size, dataset, cuda, word2vec=None, shuffle=True):
             len_src.append(len(src[ind]))
             len_tgt.append(len(tgt[ind]))
 
-        # we need to fill shorter sentences to make tensor
         max_src = max(len_src)
         max_tgt = max(len_tgt)
+
+        # we need to fill shorter sentences to make tensor
         b_src_ = [fill_seq(seq, max_src, PAD_token) for seq in b_src]
         b_tgt_ = [fill_seq(seq, max_tgt, PAD_token) for seq in b_tgt]
 
@@ -248,10 +259,6 @@ def minibatch_generator(size, dataset, cuda, word2vec=None, shuffle=True):
         # create pytorch variable, transpose to have (seq, batch)
         batch_src = Variable(torch.LongTensor(b_src_s).t())
         batch_tgt = Variable(torch.LongTensor(b_tgt_s).t())
-
-        #TODO:
-        # make batch_src be the embedding directly if using word2vec
-        # batch_src should be of size (batch_size, seq, 300) when returned)
 
         if cuda:
             batch_src = batch_src.cuda()

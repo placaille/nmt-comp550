@@ -29,9 +29,6 @@ parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='report interval')
 parser.add_argument('--beam_size', type=int, default=5, metavar='N',
                     help='width of beam search during generation')
-parser.add_argument('--path_to_word2vec', type=str,
-                    default='./GoogleNews-vectors-negative300.bin.gz',
-                    help='Path to pre-trained word2vec')
 parser.add_argument('--lang', type=str,  default='en-fr',
                     choices=['en-fr', 'en-de'],
                     help='in-out languages')

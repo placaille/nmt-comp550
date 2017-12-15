@@ -15,9 +15,9 @@ import model
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, default='../data/multi30k',
                     help='location of the data corpus')
-parser.add_argument('--path_to_word2vec', type=str,
-                    default='./GoogleNews-vectors-negative300.bin.gz',
-                    help='Path to pre-trained word2vec')
+parser.add_argument('--path_word_emb', type=str,
+                    default='./word_embeddings',
+                    help='Path with pre-trained word_embeddings')
 parser.add_argument('--model', type=str, default='LSTM',
                     choices=['LSTM', 'GRU'],
                     help='type of recurrent net (LSTM, GRU)')
@@ -35,8 +35,8 @@ parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
-parser.add_argument('--use_word2vec', action='store_true',
-                    help='use pre-trained word2vec embeddings')
+parser.add_argument('--use_word_emb', action='store_true',
+                    help='use pre-trained word embeddings')
 parser.add_argument('--batch_size', type=int, default=100, metavar='N',
                     help='batch size')
 parser.add_argument('--bidirectional', action='store_true',
@@ -86,9 +86,17 @@ if torch.cuda.is_available():
 # Load data
 ###############################################################################
 
+if args.use_word_emb:
+    if args.verbose:
+        print('Loading Word2Vec model..')
+
+    Word2Vec = utils.init_google_word2vec_model(args.path_word_emb)
+else:
+    Word2Vec = None
+
 if args.verbose:
     print('Processing data..')
-corpus = data.Corpus(args.data, args.lang)
+corpus = data.Corpus(args.data, args.lang, word_emb=Word2Vec)
 
 # save the dictionary for generation
 with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
@@ -97,14 +105,6 @@ with open(os.path.join(args.save, 'vocab.pt'), 'wb') as f:
 ###############################################################################
 # Build the model
 ###############################################################################
-
-if args.use_word2vec:
-    if args.verbose:
-        print('Loading Word2Vec model..')
-
-    Word2Vec = utils.init_google_word2vec_model(args.path_to_word2vec)
-else:
-    Word2Vec = None
 
 if args.verbose:
     print('Building model..')
@@ -154,7 +154,9 @@ def train_epoch():
     minibatches = utils.minibatch_generator(args.batch_size,
                                             corpus.train,
                                             args.cuda,
-                                            word2vec=Word2Vec)
+                                            word2vec=Word2Vec,
+                                            vocab=corpus.dictionary['src'],
+                                            shuffle=True)
 
     upper_bd = 10 if args.debug else float('inf')
     for n_batch, batch in enumerate(minibatches):
