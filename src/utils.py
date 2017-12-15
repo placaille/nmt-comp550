@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from torch.autograd import Variable
 from torch.nn import functional
-from gensim.models import KeyedVectors  # used for embeddings
 
 from beam_wrapper import *
 
@@ -108,7 +107,7 @@ def masked_cross_entropy(logits, target, length):
     loss = losses.sum() / length.float().sum()
     return loss
 
-def step(encoder, decoder, batch, optimizer, train=True, args=None):
+def step(encoder, decoder, batch, optimizer, train=True, args=None, beam_size=0):
   
     PAD_token = 0
     SOS_token = 2
@@ -192,10 +191,10 @@ def step(encoder, decoder, batch, optimizer, train=True, args=None):
         preds = preds.cuda()
 
     # decode by looping time steps
-    if args.beam_size:
+    if beam_size:
 
         beam_searcher = BSWrapper(decoder, dec_hid, b_size, args.max_length,
-                                  args.beam_size, args.cuda, enc_out)
+                                  beam_size, args.cuda, enc_out)
 
         preds = torch.LongTensor(beam_searcher.decode())
 
