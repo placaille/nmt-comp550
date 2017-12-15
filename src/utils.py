@@ -114,16 +114,31 @@ def step(encoder, decoder, batch, optimizer,
     else:
         dec_hid = context
 
+    dec_hid_old = dec_hid
     if img_conditioning == 1:
         # the decoder hidden state is a fct of h_enc_T and the image features
         # for an LSTM, we apply it to the c_T = dec_hid[1]
-        ctx = dec_hid[1] if len(dec_hid) == 2 else dec_hid
-        ctx = encoder.img_cond(torch.cat((ctx, img_feat.unsqueeze(0)), 2))
-        ctx = functional.tanh(ctx)
-        if len(dec_hid) == 1: 
-            dec_hid = ctx
+        if type(dec_hid) is tuple: 
+            # LSTM
+            ctx_old = dec_hid[0]
         else: 
-            dec_hid = (dec_hid[0], ctx)
+            ctx_old = dec_hid
+        
+        first_layer = ctx_old[0]
+        first_layer = encoder.img_cond(torch.cat((first_layer, img_feat), 1))
+        first_layer = functional.tanh(first_layer)
+
+        if ctx_old.size(0) > 1: 
+            ctx = torch.cat((first_layer.unsqueeze(0), ctx_old[1:]), 0)
+        else: 
+            ctx = first_layer
+        
+        ctx = ctx.view(ctx_old.size())
+        if type(dec_hid) is tuple:
+            # LSTM
+            dec_hid = (ctx, dec_hid[1])
+        else: 
+            dec_hid = ctx
 
     # create SOS tokens for decoder input
     dec_input = Variable(torch.LongTensor([SOS_token] * b_size))

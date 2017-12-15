@@ -47,7 +47,7 @@ class EncoderRNN(nn.Module):
     def __init__(self, rnn_type, input_size, hidden_size, embedding_size, batch_size,
                  n_layers=2, bidirectional=False, img_conditioning=0):
         super(EncoderRNN, self).__init__()
-
+        
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.embedding_size = embedding_size
