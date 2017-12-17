@@ -28,20 +28,20 @@ class Experiment():
 	self.test_2017 = float(lines[-2].split('|')[2].split(' ')[-2])
 
     def __lt__(self, other):
-       return self.test_2016 < other.test_2017
+       return self.test_2016 < other.test_2016
 
     def __str__(self):
        str = ''
        for arg, value in self.args.items():
 	    str += '{},'.format(value)
-       return '{}, {}, {}'.format(str, self.test_2016, self.test_2017) 
+       return '{}, {}, {}\r\n'.format(str, self.test_2016, self.test_2017) 
 
     def print_args(self):
 	str = ''
 	import pdb; pdb.set_trace()
         for key in self.args.keys():
 	    str += '{},'.format(key)
-	str += 'test_2016, test_2017\n'
+	str += 'test_2016, test_2017\r\n'
 	return str
 
 
@@ -58,7 +58,7 @@ for i in range(1,600):
 
 exps.sort()
 with open('exp_log.txt', 'wb') as f: 
-    f.write(exps[0].print_args() + '\n')
+    f.write(exps[0].print_args())
     for exp in exps:
         f.write(exp.__str__())
 	    
