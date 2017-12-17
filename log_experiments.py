@@ -38,7 +38,6 @@ class Experiment():
 
     def print_args(self):
 	str = ''
-	import pdb; pdb.set_trace()
         for key in self.args.keys():
 	    str += '{},'.format(key)
 	str += 'test_2016, test_2017\r\n'
