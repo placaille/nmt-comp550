@@ -107,8 +107,9 @@ def masked_cross_entropy(logits, target, length):
     loss = losses.sum() / length.float().sum()
     return loss
 
+
 def step(encoder, decoder, batch, optimizer, train=True, args=None, beam_size=0):
-  
+
     PAD_token = 0
     SOS_token = 2
 
@@ -151,29 +152,29 @@ def step(encoder, decoder, batch, optimizer, train=True, args=None, beam_size=0)
     else:
         dec_hid = context
 
-    if args.img_conditioning == 1:
+    if encoder.img_conditioning == 1:
         # the decoder hidden state is a fct of h_enc_T and the image features
         # for an LSTM, we apply it to the c_T = dec_hid[1]
         if type(dec_hid) is tuple: 
             # LSTM
             ctx_old = dec_hid[0]
-        else: 
+        else:
             ctx_old = dec_hid
-        
+
         first_layer = ctx_old[0]
         first_layer = encoder.img_cond(torch.cat((first_layer, img_feat), 1))
         first_layer = functional.tanh(first_layer)
 
-        if ctx_old.size(0) > 1: 
+        if ctx_old.size(0) > 1:
             ctx = torch.cat((first_layer.unsqueeze(0), ctx_old[1:]), 0)
-        else: 
+        else:
             ctx = first_layer
-        
+
         ctx = ctx.view(ctx_old.size())
         if type(dec_hid) is tuple:
             # LSTM
             dec_hid = (ctx, dec_hid[1])
-        else: 
+        else:
             dec_hid = ctx
 
     # create SOS tokens for decoder input

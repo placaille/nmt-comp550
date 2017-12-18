@@ -47,7 +47,7 @@ class EncoderRNN(nn.Module):
     def __init__(self, rnn_type, input_size, hidden_size, embedding_size, batch_size,
                  n_layers=2, bidirectional=False, img_conditioning=0):
         super(EncoderRNN, self).__init__()
-        
+
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.embedding_size = embedding_size
@@ -55,6 +55,7 @@ class EncoderRNN(nn.Module):
         self.n_layers = n_layers
         self.rnn_type = rnn_type
         self.bidirectional = bidirectional
+        self.img_conditioning = img_conditioning
 
         self.embedding = nn.Embedding(input_size, embedding_size)
         if rnn_type == 'GRU':
@@ -64,10 +65,10 @@ class EncoderRNN(nn.Module):
             self.rnn = nn.LSTM(embedding_size, hidden_size, n_layers,
                                bidirectional=bidirectional)
 
-        if img_conditioning == 1: 
+        if img_conditioning == 1:
             dec_dim = hidden_size * 2 if bidirectional else hidden_size
             self.img_cond = nn.Linear(2048 + dec_dim, dec_dim)
-        elif img_conditioning > 1: 
+        elif img_conditioning > 1:
             raise Exception('conditioning mode {} not currently supported'.format(img_conditioning))
 
     def forward(self, input, hidden, input_lengths):

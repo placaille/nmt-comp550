@@ -45,6 +45,10 @@ if torch.cuda.is_available():
 with open(os.path.join(args.path_to_model, '../args.info'), 'rb') as f:
     train_args = pkl.load(f)
 
+# compatibility for older models
+if not hasattr(train_args, 'img_conditioning'):
+    train_args.img_conditioning = 0
+
 ###############################################################################
 # Load data
 ###############################################################################
@@ -109,8 +113,7 @@ def make_preds(dataset, encoder, decoder, dictionary, batch_size,
     minibatches = utils.minibatch_generator(batch_size, dataset, cuda)
     for n_batch, batch in enumerate(minibatches):
 
-        _, pred, _ = utils.step(encoder, decoder, batch, None, train=False,
-                                cuda=cuda, max_length=max_length,
+        _, pred, _ = utils.step(encoder, decoder, batch, None, False, args,
                                 beam_size=args.beam_size)
 
         # true target
