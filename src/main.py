@@ -224,8 +224,10 @@ for epoch in range(1, args.epochs+1):
 
 print('=' * 89)
 if args.verbose:
-    print('| Loading best model for epoch {} and evaluating test..'
-          .format(best_epoch))
+    print('| Loading best model and evaluating test..')
+
+print('| Best epoch: {} | valid loss {:5.2f} | valid ppl {:8.2f}'
+      .format(best_epoch, best_val_loss, np.exp(best_val_loss)))
 
 # create new model of same specs
 best_encoder, best_decoder = model.build_model(len(corpus.dictionary['src']),
