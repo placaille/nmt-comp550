@@ -28,7 +28,7 @@ une étendue d'eau avec la lumière du soleil perçant les nuages .
 un avion avec une banderole survolant une plage avec des gens sur le sable et dans l'eau .
 un petit jet blanc décollant , avec de l'eau sur le côté .
 une jeune fille pose farouchement en utilisant du matériel de fitness .
-une pancarte &quot; propriété privée &quot; et un panneau pour un restaurant
+une pancarte propriété privée et un panneau pour un restaurant
 des pins , et des montagnes enneigées en arrière-plan
 une femme penchée vers une créature primate noire en ayant l'air de l'embrasser , debout sur un plancher en bois .
 deux jeunes filles debout le long d'une rue dehors , regardant quelque chose .
@@ -46,7 +46,7 @@ une statue de pierre au-dessus d'une horloge avec un grand bâtiment en arrière
 un groupe de jeunes attendant que le ballon de football retombe
 une vieille machine à laver dans la rue
 des gens sur un trottoir bondé bordé de maisons , et les drapeaux américains sont exposés .
-une remorque de transport blanche avec une extrémité froissée et les mots &quot; nothing lef nothing right &quot; gribouillés dessus , sur un sol en terre .
+une remorque de transport blanche avec une extrémité froissée et les mots nothing lef nothing right gribouillés dessus , sur un sol en terre .
 une femme marche dans les bois .
 un chien court sur une plage .
 deux cyclistes à toute vitesse dans la rue
@@ -329,7 +329,7 @@ un match de volley-ball féminin avec de nombreux spectateurs
 une personne pousse une structure en bois au sommet d'une colline tandis qu'une autre personne est assise de l'autre côté de cette structure .
 un cycliste sur une route sinueuse dans une chaîne de montagnes .
 trois cerfs broutent dans l'herbe près d'un immeuble .
-une vue du ciel au crépuscule , prise de derrière un panneau où on lit &quot; boston . &quot;
+une vue du ciel au crépuscule , prise de derrière un panneau où on lit boston .
 une vue depuis la fenêtre sur un jardin paysager .
 une voiture bleue circule le long d'une route incurvée humide .
 une personne porte un déguisement en fourrure violet avec deux têtes de bêtes attachées .
@@ -807,7 +807,7 @@ superbe paysage composé de forêts de montagne et d'un lac
 c'est une scène d'un plan d'eau avec , à l'arrière plan , des bateaux entourés d'arbres .
 un pont de bois enjambant une cascade dans la forêt
 une femme est en train d'entraîner son chien
-un &quot; monster truck &quot; vole la tête en bas au dessus d'un monticule de terre .
+un monster truck vole la tête en bas au dessus d'un monticule de terre .
 des nuages se trouvent entre les montagnes rocheuses .
 une femme en bottes noires et robe blanche court sur un pont .
 un traineau tiré par des chiens dans la neige et un homme habillé en noir .
@@ -893,7 +893,7 @@ un homme regarde par la fenêtre d'un véhicule de collection .
 plusieurs enfants jouant sur un terrain avec des ballons
 une danseuse portant une robe rouge est en train de sauter en l'air .
 un homme se tient à l'entrée d'un bar
-des avions rouges volent en formation en &quot; v &quot; avec un avion vert en dessous d'eux .
+des avions rouges volent en formation en v avec un avion vert en dessous d'eux .
 un couple âgé assis sur les balançoires d'un jardin
 un rivière sinueuse avec des bancs de sable blancs .
 un homme avec une canne à pêche au bord de la mer
