@@ -13,21 +13,22 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
         dec_nhid = args.nhid * 2
     else:
         dec_nhid = args.nhid
-    
+
     encoder = EncoderRNN(args.model,
                          src_vocab_size,
                          args.nhid,
                          args.emb_size,
                          args.batch_size,
                          args.nlayers,
-                         args.bidirectional, 
-                         img_conditioning=args.img_conditioning) 
+                         args.bidirectional,
+                         args.img_conditioning,
+                         args.dropout)
 
     if args.use_attention:
         decoder = Luong_Decoder(args.model,
                                 dec_nhid,
                                 tgt_vocab_size,
-                                args.emb_size, 
+                                args.emb_size,
                                 args.batch_size,
                                 n_layers=args.nlayers,
                                 dropout_p=args.dropout)
@@ -38,14 +39,16 @@ def build_model(src_vocab_size, tgt_vocab_size, args):
                              args.emb_size,
                              tgt_vocab_size,
                              args.batch_size,
-                             args.nlayers)
+                             args.nlayers,
+                             args.dropout)
 
     return encoder, decoder
 
 
 class EncoderRNN(nn.Module):
     def __init__(self, rnn_type, input_size, hidden_size, embedding_size, batch_size,
-                 n_layers=2, bidirectional=False, img_conditioning=0):
+                 n_layers=2, bidirectional=False, img_conditioning=0,
+                 dropout_p=0):
         super(EncoderRNN, self).__init__()
 
         self.input_size = input_size
@@ -58,6 +61,8 @@ class EncoderRNN(nn.Module):
         self.img_conditioning = img_conditioning
 
         self.embedding = nn.Embedding(input_size, embedding_size)
+        self.dropout = nn.Dropout(dropout_p)
+
         if rnn_type == 'GRU':
             self.rnn = nn.GRU(embedding_size, hidden_size, n_layers,
                               bidirectional=bidirectional)
@@ -73,6 +78,7 @@ class EncoderRNN(nn.Module):
 
     def forward(self, input, hidden, input_lengths):
         embedding = self.embedding(input)
+        embedding = self.dropout(embedding)
         embedding_packed = pack_padded_sequence(embedding, input_lengths)
 
         output, hidden = self.rnn(embedding_packed, hidden)
@@ -94,7 +100,7 @@ class EncoderRNN(nn.Module):
 
 class DecoderRNN(nn.Module):
     def __init__(self, rnn_type, hidden_size, embedding_size, output_size,
-                 batch_size, n_layers=2):
+                 batch_size, n_layers=2, dropout_p=0):
         super(DecoderRNN, self).__init__()
 
         self.hidden_size = hidden_size
@@ -106,6 +112,8 @@ class DecoderRNN(nn.Module):
         self.use_attention = False
 
         self.embedding = nn.Embedding(output_size, embedding_size)
+        self.dropout = nn.Dropout(dropout_p)
+
         if rnn_type == 'GRU':
             self.rnn = nn.GRU(embedding_size, hidden_size, n_layers)
         elif rnn_type == 'LSTM':
@@ -115,6 +123,7 @@ class DecoderRNN(nn.Module):
 
     def forward(self, input, hidden, encoder_outputs=None):
         embedding = self.embedding(input).view(1, input.size(0), -1)
+        embedding = self.dropout(embedding)
 
         output, hidden = self.rnn(embedding, hidden)
         output = self.out(output.view(input.size(0), -1))
@@ -127,8 +136,8 @@ class Luong_Attention(nn.Module):
 
         assert score.lower() in ['concat', 'general', 'dot']
         self.score = score.lower()
-        wn = lambda x : nn.utils.weight_norm(x)
-        
+        wn = lambda x: nn.utils.weight_norm(x)
+
         if self.score == 'general': 
             self.attn = wn(nn.Linear(hidden_size, hidden_size))
         elif self.score == 'concat':
@@ -144,18 +153,18 @@ class Luong_Attention(nn.Module):
         assert len(hidden_state.size()) == 3 
 
         # put batch on 1st axis (easier for batch matrix mul)
-        hidden_state    = hidden_state.transpose(1, 0).contiguous()
+        hidden_state = hidden_state.transpose(1, 0).contiguous()
         encoder_outputs = encoder_outputs.transpose(1, 0).contiguous()
 
-        if self.score == 'dot': 
+        if self.score == 'dot':
             # bs x tgt_len=1 x src_len
-            grid = torch.bmm(hidden_state, encoder_outputs.transpose(2,1)) 
-        elif self.score == 'general': 
+            grid = torch.bmm(hidden_state, encoder_outputs.transpose(2,1))
+        elif self.score == 'general':
             # bs x tgt_len=1 x src_len
             grid = torch.bmm(hidden_state, self.attn(encoder_outputs).transpose(2,1))
         elif self.score == 'concat':
             # bs x src_len x n_hid
-            cc = self.attn(torch.cat((hidden_state.expand(encoder_outputs.size()), 
+            cc = self.attn(torch.cat((hidden_state.expand(encoder_outputs.size()),
                                       encoder_outputs), 2))
             # bs x src_len x 1
             grid = self.v(cc)
