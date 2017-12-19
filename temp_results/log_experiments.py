@@ -26,21 +26,27 @@ class Experiment():
             lines = f.read().splitlines()
         self.test_2016 = float(lines[-3].split('|')[2].split(' ')[-2])
 	self.test_2017 = float(lines[-2].split('|')[2].split(' ')[-2])
+	best_valid = 999999.
+	for line in lines:
+	    if 'valid' in line: 
+		score = float(line.split('|')[-2].split(' ')[-2])
+		best_valid = min(score, best_valid)
+	self.valid = best_valid
 
     def __lt__(self, other):
-       return self.test_2016 < other.test_2016
+       return self.valid < other.valid
 
     def __str__(self):
        str = ''
        for arg, value in self.args.items():
 	    str += '{},'.format(value)
-       return '{}, {}, {}\r\n'.format(str, self.test_2016, self.test_2017) 
+       return '{}, {}, {}, {}\r\n'.format(str, self.valid, self.test_2016, self.test_2017) 
 
     def print_args(self):
 	str = ''
         for key in self.args.keys():
 	    str += '{},'.format(key)
-	str += 'test_2016, test_2017\r\n'
+	str += 'valid, test_2016, test_2017\r\n'
 	return str
 
 
@@ -56,6 +62,7 @@ for i in range(1,600):
 	pass
 
 exps.sort()
+import pdb; pdb.set_trace()
 with open('exp_log.txt', 'wb') as f: 
     f.write(exps[0].print_args())
     for exp in exps:
