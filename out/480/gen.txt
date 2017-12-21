@@ -1,0 +1,39 @@
+Wed Dec 20 06:47:56 PST 2017 - Generating val on cdr344.int.cedar.computecanada.ca - 480
+image feat path :data/multi30k/image_features/flickr30k_ResNet50_pool5_val.mat
+data arg :  val
+Processing data..
+Loading model from ./out/480/bin..
+EncoderRNN(
+  (embedding): Embedding(9935, 300)
+  (dropout): Dropout(p=0.5)
+  (rnn): LSTM(300, 500)
+)
+Luong_Decoder(
+  (embedding): Embedding(11618, 300)
+  (attn): Luong_Attention(
+    (attn): Linear(in_features=500, out_features=500)
+  )
+  (dropout): Dropout(p=0.5)
+  (out): Linear(in_features=500, out_features=11618)
+  (concat): Linear(in_features=1000, out_features=500)
+  (rnn): LSTM(300, 500)
+)
+Making predictions..
+|     5/   40 batches | ms/batch 13876.89 |
+|    10/   40 batches | ms/batch 11023.33 |
+|    15/   40 batches | ms/batch 11576.39 |
+|    20/   40 batches | ms/batch 11051.78 |
+|    25/   40 batches | ms/batch 10939.03 |
+|    30/   40 batches | ms/batch 11186.07 |
+|    35/   40 batches | ms/batch 11247.32 |
+|    40/   40 batches | ms/batch 10982.29 |
+./out/480/bin/../pred/pred_val_en-fr.txt was saved.
+./out/480/bin/../gold/gold_val_en-fr.txt was saved.
+./out/480/bin/../pred/pred_val_en-fr_nounk.txt was saved.
+./out/480/bin/../gold/gold_val_en-fr_nounk.txt was saved.
+=========================================================================================
+Scoring val predictions (keeping unkown)..
+BLEU = 47.85, 72.1/54.1/41.6/32.4 (BP=1.000, ratio=1.005, hyp_len=14029, ref_len=13963)
+Scoring val predictions (removed unkown)..
+BLEU = 51.43, 75.1/57.9/45.3/35.9 (BP=0.997, ratio=0.997, hyp_len=11777, ref_len=11809)
+=========================================================================================
