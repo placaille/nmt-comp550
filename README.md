@@ -1,19 +1,14 @@
 # Natural Language Processing through Neural Machine Translation
 
-This is the repository for the final project of the _Natural Language
-Processing_ class of Fall 2017 at McGill University.
+This is the repository for the final project submission of Philippe Lacaille
+and Lucas Pagé-Caccia for the _Natural Language
+Processing_ class (COMP550) of Fall 2017 at McGill University.
 
+A copy of the final report submitted is included in this repo.
 
 ## Links to download the data
 
-For more information refer to [this link](http://www.statmt.org/wmt17/multimodal-task.html).
-
-The gold predictions for the task can be [found
-here](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/gold_translations_task1.tar.gz).
-However, these are already normalized, tokenized and lower cased. Furthermore,
-for French, the apostrophe character was replaced by the string "\&apos; ". As
-they are our only version of the French 2017 test, we manually modified these
-strings to make them like true characters that a French model should predict.
+For more information about the data refer to [this link](http://www.statmt.org/wmt17/multimodal-task.html).
 
 **Text data**
 * [Train](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/mmt_task1_training.tar.gz)
@@ -32,6 +27,14 @@ strings to make them like true characters that a French model should predict.
 Data is lowecased and tokenized, punctuation are considered as tokens. Only
 training data is used to build the vocabulary (from both source and target languages), while words not in vocabulary are replaced by the \<unk\> tag.
 
+The gold predictions for the task can be [found
+here](http://www.quest.dcs.shef.ac.uk/wmt17_files_mmt/gold_translations_task1.tar.gz).
+However, these are already normalized, tokenized and lower cased. Furthermore,
+for French, the apostrophe and quotes characters were replaced by the strings
+"\&apos; " and "\&quot; ". As they are our only version of the French 2017
+test, we manually modified these strings to make them like true characters that
+a French model should predict.
+
 
 ## Pre-trained word embeddings
 
@@ -44,7 +47,7 @@ download of the matrix for the 3 million words can be done with this [direct
 link](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit?usp=sharing).
 
 To use it in python, we will be using the `gensim` package. Refer to [this
-function](https://github.com/placaille/nmt-comp550/blob/master/src/utils.py#L19) in our code for detailed usage of the pre-trained model.
+function](https://github.com/placaille/nmt-comp550/blob/master/src/utils.py#L18) in our code for detailed usage of the pre-trained model.
 
 ### Creating pre-trained embedding layer
 
