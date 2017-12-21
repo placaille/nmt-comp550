@@ -1,0 +1,32 @@
+Tue Dec 19 17:50:47 PST 2017 - Generating test2016 on cdr163.int.cedar.computecanada.ca - run_66
+Processing data..
+Loading model from ./out/run_66/bin..
+EncoderRNN(
+  (embedding): Embedding(9935, 300)
+  (dropout): Dropout(p=0.5)
+  (rnn): LSTM(300, 600)
+)
+DecoderRNN(
+  (embedding): Embedding(11618, 300)
+  (dropout): Dropout(p=0.5)
+  (rnn): LSTM(300, 600)
+  (out): Linear(in_features=600, out_features=11618)
+)
+Making predictions..
+|     5/   40 batches | ms/batch 7756.92 |
+|    10/   40 batches | ms/batch 6463.71 |
+|    15/   40 batches | ms/batch 6585.65 |
+|    20/   40 batches | ms/batch 6488.26 |
+|    25/   40 batches | ms/batch 6577.92 |
+|    30/   40 batches | ms/batch 6642.15 |
+|    35/   40 batches | ms/batch 6444.97 |
+./out/run_66/bin/../pred/pred_test2016_en-fr.txt was saved.
+./out/run_66/bin/../gold/gold_test2016_en-fr.txt was saved.
+./out/run_66/bin/../pred/pred_test2016_en-fr_nounk.txt was saved.
+./out/run_66/bin/../gold/gold_test2016_en-fr_nounk.txt was saved.
+=========================================================================================
+Scoring test2016 predictions (keeping unkown)..
+BLEU = 29.70, 58.3/36.0/23.5/15.8 (BP=1.000, ratio=1.038, hyp_len=14127, ref_len=13613)
+Scoring test2016 predictions (removed unkown)..
+BLEU = 32.06, 60.5/38.4/25.8/17.7 (BP=1.000, ratio=1.034, hyp_len=11952, ref_len=11561)
+=========================================================================================
