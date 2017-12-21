@@ -1,0 +1,38 @@
+Wed Dec 20 20:22:08 PST 2017 - Generating test2017 on cdr351.int.cedar.computecanada.ca - 492
+image feat path :data/multi30k/image_features/task1_ResNet50_pool5_test2017.mat
+data arg :  test2017
+Processing data..
+Loading model from ./out/492/bin..
+EncoderRNN(
+  (embedding): Embedding(9935, 400)
+  (dropout): Dropout(p=0.5)
+  (rnn): LSTM(400, 600)
+)
+Luong_Decoder(
+  (embedding): Embedding(11618, 400)
+  (attn): Luong_Attention(
+    (attn): Linear(in_features=600, out_features=600)
+  )
+  (dropout): Dropout(p=0.5)
+  (out): Linear(in_features=600, out_features=11618)
+  (concat): Linear(in_features=1200, out_features=600)
+  (rnn): LSTM(400, 600)
+)
+Making predictions..
+|     5/   40 batches | ms/batch 12491.87 |
+|    10/   40 batches | ms/batch 9989.67 |
+|    15/   40 batches | ms/batch 10784.14 |
+|    20/   40 batches | ms/batch 10056.77 |
+|    25/   40 batches | ms/batch 10334.87 |
+|    30/   40 batches | ms/batch 9843.48 |
+|    35/   40 batches | ms/batch 10642.08 |
+./out/492/bin/../pred/pred_test2017_en-fr.txt was saved.
+./out/492/bin/../gold/gold_test2017_en-fr.txt was saved.
+./out/492/bin/../pred/pred_test2017_en-fr_nounk.txt was saved.
+./out/492/bin/../gold/gold_test2017_en-fr_nounk.txt was saved.
+=========================================================================================
+Scoring test2017 predictions (keeping unkown)..
+BLEU = 42.02, 68.0/48.3/35.5/26.8 (BP=1.000, ratio=1.004, hyp_len=12260, ref_len=12210)
+Scoring test2017 predictions (removed unkown)..
+BLEU = 45.35, 70.7/51.8/39.0/30.0 (BP=0.996, ratio=0.996, hyp_len=10223, ref_len=10266)
+=========================================================================================
