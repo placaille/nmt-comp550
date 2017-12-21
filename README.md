@@ -1,14 +1,7 @@
-# nmt-comp550
+# Natural Language Processing through Neural Machine Translation
 
-This repo is built on top and highly inspired by pytorch's
-word\_language\_model example, and their seq2seq tutorial. See [this
-repo](https://github.com/pytorch/examples/tree/master/word_language_model) and
-[the
-doc](http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html)
-for reference.
-
-The code for the masked_cross_entropy was borrowed from [this
-repo](https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation).
+This is the repository for the final project of the _Natural Language
+Processing_ class of Fall 2017 at McGill University.
 
 
 ## Links to download the data
@@ -42,19 +35,13 @@ training data is used to build the vocabulary (from both source and target langu
 
 ## Pre-trained word embeddings
 
-Multiple pre-trained word embeddings model can be used. Here are a couple
-options.
+Multiple pre-trained word embeddings model can be used. We used the following
+model.
 
 * Google's word2vec model, more information can be
 found [at this link](https://code.google.com/archive/p/word2vec/). Direct
 download of the matrix for the 3 million words can be done with this [direct
 link](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit?usp=sharing).
-
-* Stanford's GloVe model, more information can
-be found [at this link](https://nlp.stanford.edu/projects/glove/). Direct
-download of pre-trained model (42B tokens, 1.9M vocab, uncased, 300d vectors)
-can be done with this [direct
-link](http://nlp.stanford.edu/data/wordvecs/glove.42B.300d.zip).
 
 To use it in python, we will be using the `gensim` package. Refer to [this
 function](https://github.com/placaille/nmt-comp550/blob/master/src/utils.py#L19) in our code for detailed usage of the pre-trained model.
@@ -75,10 +62,15 @@ none, partial}` though partial training is not yet supported.
 
 ## References
 
-One of the first if not the first seq2seq learning, they talk about the
-necessity of doing beam search. See *Decoding and Rescoring* [link to
-paper](https://arxiv.org/pdf/1409.3215v1.pdf%3B)
+This repo is built on top and highly inspired by pytorch's
+word\_language\_model example, and their seq2seq tutorial under the BSD 3-Clause License. See [this
+repo](https://github.com/pytorch/examples/tree/master/word_language_model) and
+[the
+doc](http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html)
+for reference.
+
+The code for the masked_cross_entropy was borrowed from [this
+repo](https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation) under the The MIT License (MIT).
 
 Beam search implementation from [this repo](
-https://github.com/GuessWhatGame/guesswhat/blob/master/src/guesswhat/models/qgen/qgen_beamsearch_wrapper.py) was highly inspired but was modified to fit our needs and model.
-
+https://github.com/GuessWhatGame/guesswhat/blob/master/src/guesswhat/models/qgen/qgen_beamsearch_wrapper.py) under the Apache License was highly inspired but was modified to fit our needs and model.
