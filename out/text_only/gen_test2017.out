@@ -1,0 +1,36 @@
+Tue Dec 19 12:42:15 EST 2017 - Generating test2017 on leto30 - run_55
+Processing data..
+Loading model from /data/milatmp1/lacaillp/nmt-comp550/out/run_55/bin..
+EncoderRNN(
+  (embedding): Embedding(9935, 300)
+  (dropout): Dropout(p=0.5)
+  (rnn): LSTM(300, 600)
+)
+Luong_Decoder(
+  (embedding): Embedding(11618, 300)
+  (attn): Luong_Attention(
+    (attn): Linear(in_features=600, out_features=600)
+  )
+  (dropout): Dropout(p=0.5)
+  (out): Linear(in_features=600, out_features=11618)
+  (concat): Linear(in_features=1200, out_features=600)
+  (rnn): LSTM(300, 600)
+)
+Making predictions..
+|     5/   40 batches | ms/batch 8462.85 |
+|    10/   40 batches | ms/batch 7388.97 |
+|    15/   40 batches | ms/batch 7383.45 |
+|    20/   40 batches | ms/batch 7660.45 |
+|    25/   40 batches | ms/batch 7227.16 |
+|    30/   40 batches | ms/batch 7370.53 |
+|    35/   40 batches | ms/batch 7379.30 |
+/data/milatmp1/lacaillp/nmt-comp550/out/run_55/bin/../pred/pred_test2017_en-fr.txt was saved.
+/data/milatmp1/lacaillp/nmt-comp550/out/run_55/bin/../gold/gold_test2017_en-fr.txt was saved.
+/data/milatmp1/lacaillp/nmt-comp550/out/run_55/bin/../pred/pred_test2017_en-fr_nounk.txt was saved.
+/data/milatmp1/lacaillp/nmt-comp550/out/run_55/bin/../gold/gold_test2017_en-fr_nounk.txt was saved.
+=========================================================================================
+Scoring test2017 predictions (keeping unkown)..
+BLEU = 42.22, 68.5/48.7/35.4/26.8 (BP=1.000, ratio=1.005, hyp_len=12275, ref_len=12210)
+Scoring test2017 predictions (removed unkown)..
+BLEU = 45.79, 71.4/52.5/39.1/30.1 (BP=0.999, ratio=0.999, hyp_len=10258, ref_len=10266)
+=========================================================================================

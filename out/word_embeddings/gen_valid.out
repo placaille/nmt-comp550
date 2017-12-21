@@ -1,0 +1,33 @@
+Tue Dec 19 17:50:30 PST 2017 - Generating val on cdr163.int.cedar.computecanada.ca - run_66
+Processing data..
+Loading model from ./out/run_66/bin..
+EncoderRNN(
+  (embedding): Embedding(9935, 300)
+  (dropout): Dropout(p=0.5)
+  (rnn): LSTM(300, 600)
+)
+DecoderRNN(
+  (embedding): Embedding(11618, 300)
+  (dropout): Dropout(p=0.5)
+  (rnn): LSTM(300, 600)
+  (out): Linear(in_features=600, out_features=11618)
+)
+Making predictions..
+|     5/   40 batches | ms/batch 8159.96 |
+|    10/   40 batches | ms/batch 6405.47 |
+|    15/   40 batches | ms/batch 6913.64 |
+|    20/   40 batches | ms/batch 6628.50 |
+|    25/   40 batches | ms/batch 6837.72 |
+|    30/   40 batches | ms/batch 6387.74 |
+|    35/   40 batches | ms/batch 6409.19 |
+|    40/   40 batches | ms/batch 5782.82 |
+./out/run_66/bin/../pred/pred_val_en-fr.txt was saved.
+./out/run_66/bin/../gold/gold_val_en-fr.txt was saved.
+./out/run_66/bin/../pred/pred_val_en-fr_nounk.txt was saved.
+./out/run_66/bin/../gold/gold_val_en-fr_nounk.txt was saved.
+=========================================================================================
+Scoring val predictions (keeping unkown)..
+BLEU = 29.31, 57.9/35.5/23.3/15.4 (BP=1.000, ratio=1.027, hyp_len=14339, ref_len=13963)
+Scoring val predictions (removed unkown)..
+BLEU = 31.82, 60.6/38.3/25.6/17.3 (BP=1.000, ratio=1.018, hyp_len=12025, ref_len=11809)
+=========================================================================================
